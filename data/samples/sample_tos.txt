@@ -1,0 +1,48 @@
+TERMS OF SERVICE
+
+Last updated: 1 March 2026
+
+These Terms of Service govern your use of the StreamBox
+application and website. By creating an account you agree to
+these Terms.
+
+1. Definitions
+
+1.1 "Service" means the StreamBox application, website and any
+related content.
+1.2 "Subscription" means a paid plan that gives access to the
+Service for a recurring billing period.
+
+2. Fees and Automatic Renewal
+
+2.1 Your Subscription renews automatically at the end of each
+billing period unless you cancel at least 24 hours before the
+renewal date. The renewal fee will be charged to your saved
+payment method.
+2.2 We may change our fees at any time. Changes take effect
+from your next billing period, and you will be notified by email
+30 days before they apply.
+
+3. Data Sharing
+
+We may share your personal data with:
+(a) advertising partners, to show you relevant offers;
+(b) analytics providers; and
+(c) any successor company in the event of a merger.
+
+You can opt out of advertising sharing in your account settings.
+
+4. Limitation of Liability
+To the maximum extent permitted by law, StreamBox is not liable
+for any indirect or consequential loss arising from your use of
+the Service.
+
+DISPUTE RESOLUTION
+
+Any dispute arising from these Terms will be resolved by binding
+individual arbitration. You waive any right to participate in a
+class action.
+
+We may update these Terms at any time by posting a new version
+on our website. Continued use of the Service means you accept
+the updated Terms.

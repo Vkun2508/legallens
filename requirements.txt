@@ -1,0 +1,3 @@
+# Core segmentation uses only the standard library.
+pypdf>=4.0      # optional: reading text-based PDFs
+pytest>=8.0     # tests
