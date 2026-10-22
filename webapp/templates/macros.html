@@ -1,0 +1,16 @@
+{% macro seal(class="") -%}
+<svg class="seal {{ class }}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <circle class="seal-ring" cx="20" cy="20" r="18.5" pathLength="1"/>
+  <circle class="seal-ring seal-ring-inner" cx="20" cy="20" r="15" pathLength="1"/>
+  <text class="seal-glyph" x="20" y="26.6" text-anchor="middle">§</text>
+</svg>
+{%- endmacro %}
+
+{% macro arrow() -%}
+<svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8h10m-4-4 4 4-4 4"/></svg>
+{%- endmacro %}
+
+{% macro tier_badge(tier, tier_labels, qualifier=false) -%}
+<span class="tier-badge tier-{{ tier }}">{{ tier_labels[tier][0] }}{% if qualifier %}<span class="tier-qualifier"> · {{ tier_labels[tier][1] }}</span>{% endif %}</span>
+{%- endmacro %}

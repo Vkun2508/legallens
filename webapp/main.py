@@ -14,6 +14,7 @@ import logging
 import time
 from collections import Counter
 from dataclasses import dataclass
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 
@@ -23,7 +24,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.formparsers import MultiPartParser
 
-from legallens import Clause, load_bytes, normalize_text, segment
+from legallens import Assessment, Clause, assess, load_bytes, normalize_text, segment
+from legallens.risk import CATEGORIES, CATEGORY_BY_KEY, TIER_LABELS, TIERS
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_PAGES = 200
@@ -41,6 +43,7 @@ _CARRIED_HEADING_MIN_CLAUSES = 5
 MultiPartParser.spool_max_size = _MAX_REQUEST_BYTES
 
 _HERE = Path(__file__).resolve().parent
+SAMPLE_TEXT = (_HERE.parent / "data" / "samples" / "sample_tos.txt").read_text(encoding="utf-8")
 logger = logging.getLogger("legallens.webapp")
 
 app = FastAPI(title="LegalLens")
@@ -60,13 +63,14 @@ class Analysis:
     source: str
     text: str
     clauses: list[Clause]
+    risks: list[Assessment]  # one per clause, same order
     warnings: list[str]
 
     def to_dict(self) -> dict:
         return {
             "source": self.source,
             "text": self.text,
-            "clauses": [c.to_dict() for c in self.clauses],
+            "clauses": [{**c.to_dict(), "risk": r.to_dict()} for c, r in zip(self.clauses, self.risks)],
             "warnings": self.warnings,
         }
 
@@ -85,7 +89,7 @@ async def size_limit(request: Request, call_next):
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> Response:
-    return templates.TemplateResponse(request, "index.html", _limits())
+    return templates.TemplateResponse(request, "index.html", _index_context())
 
 
 @app.post("/analyze", response_class=HTMLResponse)
@@ -96,12 +100,18 @@ def analyze_page(
         analysis = _analyze(file, text)
     except InputError as exc:
         return _error(request, exc.message, exc.status_code)
+    cards = _cards(analysis)
     return templates.TemplateResponse(
         request,
         "results.html",
         {
             "analysis": analysis,
-            "spans": _spans(analysis.text, analysis.clauses),
+            "cards": cards,
+            "print_groups": [(t, [c for c in cards if c["risk"].tier == t]) for t in TIERS],
+            "generated_on": f"{date.today():%d %B %Y}".lstrip("0"),
+            "summary": _risk_summary(analysis.risks),
+            "spans": _spans(analysis.text, analysis.clauses, analysis.risks),
+            "tier_labels": TIER_LABELS,
             "long_clause_chars": LONG_CLAUSE_CHARS,
             "result": analysis.to_dict(),
         },
@@ -144,10 +154,11 @@ def _analyze(file: UploadFile | None, pasted: str) -> Analysis:
         size = len(pasted)
 
     clauses = segment(text)
+    risks = [assess(c.text) for c in clauses]
     logger.info(
         "analyzed %s bytes into %d clauses in %.2fs", size, len(clauses), time.perf_counter() - started
     )
-    return Analysis(source, text, clauses, _warnings(text, clauses))
+    return Analysis(source, text, clauses, risks, _warnings(text, clauses))
 
 
 def _check_pdf(data: bytes) -> None:
@@ -195,18 +206,59 @@ def _warnings(text: str, clauses: list[Clause]) -> list[str]:
     return warnings
 
 
-def _spans(text: str, clauses: list[Clause]) -> list[dict]:
+def _spans(text: str, clauses: list[Clause], risks: list[Assessment]) -> list[dict]:
     """Split the text into clause spans and the gaps between them, in order."""
     spans = []
     pos = 0
     for clause in sorted(clauses, key=lambda c: c.start):
         if clause.start > pos:
             spans.append({"clause": None, "text": text[pos : clause.start]})
-        spans.append({"clause": clause.index, "text": text[clause.start : clause.end]})
+        spans.append(
+            {"clause": clause.index, "tier": risks[clause.index].tier, "text": text[clause.start : clause.end]}
+        )
         pos = clause.end
     if pos < len(text):
         spans.append({"clause": None, "text": text[pos:]})
     return spans
+
+
+def _cards(analysis: Analysis) -> list[dict]:
+    """Per-clause display data: the clause, its risk, and its text split around evidence."""
+    cards = []
+    for clause, risk in zip(analysis.clauses, analysis.risks):
+        segments, pos = [], 0
+        for e in risk.evidence:
+            if e.start > pos:
+                segments.append({"text": clause.text[pos : e.start], "hit": None})
+            segments.append({"text": e.text, "hit": CATEGORY_BY_KEY[e.category].label})
+            pos = e.end
+        segments.append({"text": clause.text[pos:], "hit": None})
+        phrases = {}
+        for e in risk.evidence:  # first few distinct phrases per category, for "Why flagged"
+            seen = phrases.setdefault(e.category, [])
+            if e.text.lower() not in (p.lower() for p in seen) and len(seen) < 3:
+                seen.append(e.text)
+        cards.append(
+            {
+                "clause": clause,
+                "risk": risk,
+                "segments": segments,
+                "categories": [(CATEGORY_BY_KEY[k], phrases[k]) for k in risk.categories],
+            }
+        )
+    return cards
+
+
+def _risk_summary(risks: list[Assessment]) -> dict:
+    total = len(risks) or 1
+    counts = Counter(r.tier for r in risks)
+    tiers = [
+        {"key": t, "count": counts[t], "percent": round(100 * counts[t] / total, 2)}
+        for t in (*TIERS, "none")
+    ]
+    tally = Counter(k for r in risks for k in r.categories)
+    categories = [(c, tally[c.key]) for c in CATEGORIES if tally[c.key]]
+    return {"tiers": tiers, "categories": categories, "flagged": len(risks) - counts["none"]}
 
 
 def _limits() -> dict:
@@ -217,9 +269,19 @@ def _limits() -> dict:
     }
 
 
+def _index_context() -> dict:
+    return {
+        **_limits(),
+        "sample_text": SAMPLE_TEXT,
+        "tier_labels": TIER_LABELS,
+        "categories_by_tier": [(t, [c for c in CATEGORIES if c.tier == t]) for t in TIERS],
+        "category_count": len(CATEGORIES),
+    }
+
+
 def _error(request: Request, message: str, status_code: int) -> Response:
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": message}, status_code=status_code)
     return templates.TemplateResponse(
-        request, "index.html", {**_limits(), "error": message}, status_code=status_code
+        request, "index.html", {**_index_context(), "error": message}, status_code=status_code
     )

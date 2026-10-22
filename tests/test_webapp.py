@@ -131,6 +131,56 @@ def test_pdf_without_text_warns_about_scans():
     assert "scanned PDF" in result["warnings"][0]
 
 
+def test_api_includes_risk_for_each_clause():
+    result = _upload("sample_tos.txt", SAMPLE.read_bytes()).json()
+    data_sharing = result["clauses"][5]
+    assert data_sharing["risk"]["tier"] == "high"
+    assert data_sharing["risk"]["categories"] == ["data_sharing"]
+    evidence = data_sharing["risk"]["evidence"][0]
+    assert data_sharing["text"][evidence["start"] : evidence["end"]] == evidence["text"]
+
+
+def test_results_page_shows_tiers_and_evidence():
+    response = _upload("sample_tos.txt", SAMPLE.read_bytes(), path="/analyze")
+    assert "Risk overview" in response.text
+    assert response.text.count('class="tier-badge tier-high"') == 6
+    assert "Why flagged" in response.text
+    assert '<mark class="hit" title="Arbitration and waived rights">arbitration</mark>' in response.text
+    assert 'data-filter="high" aria-pressed="false"' in response.text
+
+
+def test_results_page_offers_print_summary_and_research_export():
+    html = _upload("sample_tos.txt", SAMPLE.read_bytes(), path="/analyze").text
+    assert 'id="print-summary"' in html
+    assert "Export data (JSON)" in html
+    assert 'id="download-json"' in html
+
+
+def test_print_summary_lists_flagged_clauses_by_tier():
+    html = _upload("sample_tos.txt", SAMPLE.read_bytes(), path="/analyze").text
+    report = html[html.index('<section class="print-report">') :]
+    assert report.count('<article class="print-clause') == 8  # 6 high, 1 medium, 1 low
+    tiers = re.findall(r'<h2 class="print-tier tier-(\w+)">', report)
+    assert tiers == ["high", "medium", "low"]
+    assert "1 clause has no flags and is not listed." in report
+    assert "<strong>Data sharing</strong>: “share your personal data”" in report
+
+
+def test_homepage_lists_categories_and_offers_sample():
+    response = client.get("/")
+    assert "What LegalLens flags" in response.text
+    assert "Arbitration and waived rights" in response.text
+    assert "Try the sample agreement" in response.text
+
+
+def test_sample_agreement_form_analyzes_the_bundled_sample():
+    from webapp.main import SAMPLE_TEXT
+
+    response = client.post("/analyze", data={"text": SAMPLE_TEXT})
+    assert response.status_code == 200
+    assert response.text.count('<mark id="span-') == 9
+
+
 def test_warns_about_long_clauses_and_missing_numbers():
     long_para = "The Customer agrees to the following terms. " * 40
     text = f"PRIVACY\n\n{long_para}\n\nFEES\n\nFees apply.\n\nTERMINATION\n\nYou may cancel."
