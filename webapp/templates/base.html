@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}LegalLens{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('index') }}">LegalLens</a>
+    <span class="tagline">Clause segmentation for legal and consumer agreements</span>
+  </header>
+  <main class="{% block main_class %}narrow{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    Research prototype. Automated assistance only, not legal advice.
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ analysis.source }} - LegalLens{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<div class="results-header">
+  <div>
+    <h1>{{ analysis.source }}</h1>
+    <p class="summary">
+      {{ analysis.clauses | length }} clauses found in {{ "{:,}".format(analysis.text | length) }} characters of extracted text.
+    </p>
+  </div>
+  <div class="actions">
+    <button type="button" id="download-json">Download JSON</button>
+    <a class="button" href="{{ url_for('index') }}">Analyze another</a>
+  </div>
+</div>
+
+{% if analysis.warnings %}
+<div class="alert alert-warning" role="status">
+  <strong>About this document</strong>
+  <ul>
+    {% for warning in analysis.warnings %}<li>{{ warning }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<details class="note limits">
+  <summary>How to read these results</summary>
+  <ul>
+    <li>This is rule-based structure splitting only. Clauses are not checked for risk or explained, and nothing here is legal advice.</li>
+    <li>Offsets and the text on the right refer to the text extracted from the file after clean-up: page headers, footers and page numbers are removed and words hyphenated across lines are rejoined. It is not the PDF's page layout.</li>
+    <li>Section numbers can be missing when a PDF's font hides them. Such clauses show "no number".</li>
+    <li>A paragraph whose last line reaches the page margin can merge with the next one. Clauses over {{ long_clause_chars }} characters are marked "long".</li>
+    <li>A heading applies to every clause after it until the next heading, so a document title or a "Last updated" line can appear as the heading of many clauses.</li>
+    <li>Numbered lists inside a clause, such as "1) … 2) …", may be split into separate clauses.</li>
+    <li>Scanned PDFs have no text to extract (no OCR yet), and two-column layouts have not been tested.</li>
+  </ul>
+</details>
+
+{% if analysis.clauses %}
+<div class="panes">
+  <section class="pane" aria-labelledby="clauses-title">
+    <h2 id="clauses-title">Clauses</h2>
+    <ol class="clause-list">
+      {% for clause in analysis.clauses %}
+      <li>
+        <button type="button" class="clause-item" data-clause="{{ clause.index }}" aria-controls="span-{{ clause.index }}">
+          <span class="clause-meta">
+            <span class="clause-index">#{{ clause.index }}</span>
+            <span class="clause-number{% if not clause.number %} missing{% endif %}">{{ clause.number or "no number" }}</span>
+            {% if clause.heading %}<span class="clause-heading">{{ clause.heading }}</span>{% endif %}
+          </span>
+          <span class="clause-text">{{ clause.text }}</span>
+          <span class="clause-offsets">
+            chars {{ "{:,}".format(clause.start) }}–{{ "{:,}".format(clause.end) }} · {{ "{:,}".format(clause.text | length) }} characters
+            {% if clause.text | length > long_clause_chars %}<span class="badge">long</span>{% endif %}
+          </span>
+        </button>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="pane" aria-labelledby="text-title">
+    <h2 id="text-title">Extracted text <span class="hint">highlighted by clause</span></h2>
+    <div class="doc" tabindex="0">{% for span in spans %}{% if span.clause is none %}<span class="gap">{{ span.text }}</span>{% else %}<mark id="span-{{ span.clause }}" class="span {{ 'odd' if span.clause % 2 else 'even' }}" data-clause="{{ span.clause }}">{{ span.text }}</mark>{% endif %}{% endfor %}</div>
+  </section>
+</div>
+{% else %}
+<p class="empty">No clauses were found.</p>
+{% endif %}
+
+<script type="application/json" id="result-data">{{ result | tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='app.js') }}"></script>{% endblock %}

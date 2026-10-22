@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Split an agreement into clauses</h1>
+<p class="lead">
+  Upload a terms of service, cardholder agreement or similar document. LegalLens finds
+  its clauses and section headings and shows where each one sits in the extracted text.
+</p>
+
+{% if error %}
+<div class="alert alert-error" role="alert">{{ error }}</div>
+{% endif %}
+
+<form class="upload-form" action="{{ url_for('analyze_page') }}" method="post" enctype="multipart/form-data">
+  <label class="field">
+    <span class="field-label">Document</span>
+    <input type="file" name="file" accept="{{ accept }}">
+    <span class="hint">PDF with selectable text, .txt or .md. Up to {{ max_mb }} MB and {{ max_pages }} pages.</span>
+  </label>
+
+  <div class="or">or</div>
+
+  <label class="field">
+    <span class="field-label">Paste text</span>
+    <textarea name="text" rows="8" placeholder="Paste the agreement text here"></textarea>
+  </label>
+
+  <button type="submit" class="primary">Find clauses</button>
+</form>
+
+<section class="note">
+  <h2>What happens to your document</h2>
+  <p>
+    It is processed in memory on this server and discarded as soon as the results page is sent.
+    Nothing is saved, and the document's content is never written to the server's logs.
+  </p>
+  <h2>What this version does</h2>
+  <p>
+    It splits a document into clauses using its structure: numbering, headings, labelled
+    paragraphs and paragraph breaks. It does not yet flag risky clauses or explain them in
+    plain language.
+  </p>
+</section>
+{% endblock %}
