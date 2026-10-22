@@ -6,19 +6,29 @@ Splits normalized agreement text into clauses using document structure only:
   start a new clause;
 * headings, numbered ("2. Fees") or not ("PRIVACY", "Payment Terms"), close
   the current clause and become the heading of the clauses that follow;
-* in unnumbered text, each paragraph (blank-line separated) is a clause;
+* run-in labels at the start of a paragraph ("Default: We may...",
+  "Use of the Card. You may...") start a clause headed by the label;
+* in unnumbered text, each paragraph is a clause. Paragraphs end at a blank
+  line or, in PDF text without blank lines, at a short line ending a sentence;
 * sub-items such as "(a)", "(ii)" and bullets stay inside their parent clause.
 
 A numbered line or heading is only accepted at a plausible boundary (start of
 text, after a blank line, after a heading, or after a line ending a sentence),
-which stops wrapped lines like "...within\\n30. days" being split.
+which stops wrapped lines like "...within\\n30. days" being split. A blank line
+after an unfinished sentence is treated as a page break, not a paragraph end.
+Line lengths are measured per document so that a wrapped line that fills the
+page width is not mistaken for a heading.
 
 Known limitations, kept as baseline behaviour for error analysis:
 * sentence-case headings directly followed by text ("Payment terms\\nYou...")
   are kept as clause text unless a blank line or numbered line follows;
-* in PDFs without blank lines, unnumbered paragraphs under one heading merge;
+* a paragraph whose last line happens to fill the page width merges with the
+  next paragraph in PDF text without blank lines;
 * numbered lists inside a clause ("1) The Customer...") are split out;
-* short standalone lines like "Last updated: 1 March 2026" are taken as headings.
+* short standalone lines like "Last updated: 1 March 2026", or a document
+  title, are taken as headings and carried by every clause until the next one;
+* when a PDF font drops section numbers (extracted as control characters),
+  headings are recovered but the numbers are lost.
 """
 
 from __future__ import annotations
@@ -59,14 +69,26 @@ _NUMBERED_RE = re.compile(
     (?:[\s:\-\u2013\u2014]+(?P<rest>.*))?$""",
     re.X,
 )
-_SUBITEM_RE = re.compile(r"^(?:\(?(?:[a-z]|[ivx]+)\)|[\u2022\u00b7*\-])\s")
+# "Default: We may...", "Use of the Card. You may..."; label checked separately.
+_RUN_IN_RE = re.compile(
+    r"^(?P<label>[A-Z][A-Za-z0-9'&/,\-\u2013\ufffd ]{2,48}?)(?P<sep>[:.])(?:\s+(?=[A-Z(\"'$0-9])|$)"
+)
+_SUBITEM_RE = re.compile(r"^(?:\(?(?:[a-z]|[ivx]+)\)|(?:[a-z]|[ivx]+)\.|[\u2022\u00b7*\-])\s")
+_BULLET_RE = re.compile(r"^[\u2022\u00b7*\-]\s")
 _ENDS_SENTENCE_RE = re.compile(r"[.;:!?][\"')\]]*$")
+_ENDS_PARAGRAPH_RE = re.compile(r"[.!?][\"')\]]*$")
 _HEADING_END_PUNCT = (".", ",", ";", ":", "!", "?")
 _MAX_HEADING_CHARS = 80
 _MAX_HEADING_WORDS = 10
+_MAX_RUN_IN_WORDS = 8
 # Pasted web text often has one paragraph per line and no blank lines; PDF
 # extraction wraps lines at ~60-100 chars. Longer median lines mean the former.
 _PARAGRAPH_LINE_MIN_MEDIAN = 120
+# Relative to the document's typical full line: a line at least this long ran
+# into the margin and wraps; a sentence-final line shorter than the second
+# ratio ended its paragraph early.
+_FULL_LINE_RATIO = 0.8
+_SHORT_LINE_RATIO = 0.85
 
 
 @dataclass
@@ -74,6 +96,33 @@ class _Line:
     start: int
     end: int
     text: str
+
+
+@dataclass
+class _Layout:
+    wrap: float | None  # typical full-line length (90th percentile)
+    caps_wrap: float | None  # the same for ALL-CAPS lines, which wrap sooner
+
+    @classmethod
+    def measure(cls, lines: list[_Line]) -> _Layout:
+        lengths = [len(line.text) for line in lines if line.text]
+        caps = [len(line.text) for line in lines if line.text and _is_caps(line.text)]
+        return cls(_p90(lengths), _p90(caps))
+
+    def fills_line(self, text: str, next_text: str) -> bool:
+        """True if `text` runs to the margin and continues on the next line."""
+        if not next_text or _match_number(next_text):
+            return False
+        width = self.caps_wrap if _is_caps(text) and _is_caps(next_text) and self.caps_wrap else self.wrap
+        return width is not None and len(text) >= _FULL_LINE_RATIO * width
+
+    def ends_paragraph(self, text: str) -> bool:
+        """True if `text` ends a sentence well before the margin."""
+        return (
+            self.wrap is not None
+            and len(text) < _SHORT_LINE_RATIO * self.wrap
+            and bool(_ENDS_PARAGRAPH_RE.search(text))
+        )
 
 
 @dataclass
@@ -94,6 +143,7 @@ class _Draft:
 def segment(text: str) -> list[Clause]:
     """Split agreement text (ideally from `normalize_text`) into clauses."""
     lines = _split_lines(text)
+    layout = _Layout.measure(lines)
     paragraph_per_line = _line_breaks_are_paragraphs(lines)
 
     clauses: list[Clause] = []
@@ -102,7 +152,8 @@ def segment(text: str) -> list[Clause]:
     ctx_heading: str | None = None
     prev_kind: str | None = None
     prev_text = ""
-    after_blank = True
+    after_blank = True  # any blank line since the previous text line
+    hard_break = True  # a blank line that is a paragraph break, not a page break
 
     def close() -> None:
         nonlocal draft
@@ -116,16 +167,31 @@ def segment(text: str) -> list[Clause]:
     for i, line in enumerate(lines):
         if not line.text:
             after_blank = True
+            # A list keeps its intro ("...you will not:") across a blank line.
+            if prev_kind not in ("text", "numbered", "run_in") or _ENDS_PARAGRAPH_RE.search(prev_text):
+                hard_break = True
             continue
 
-        at_boundary = (
-            after_blank
+        prev_is_body = prev_kind in ("text", "numbered", "run_in")
+        # "dollars) and..." after "...other than U.S." continues the sentence,
+        # whatever the line before looked like; "a) Claims..." does not.
+        continues_sentence = (
+            prev_is_body and line.text[0].islower() and not _SUBITEM_RE.match(line.text)
+        )
+        starts_paragraph = not continues_sentence and (
+            hard_break
             or paragraph_per_line
+            or (prev_is_body and layout.ends_paragraph(prev_text))
+        )
+        at_boundary = not continues_sentence and (
+            after_blank
+            or starts_paragraph
             or prev_kind in ("heading", "numbered_heading")
             or bool(_ENDS_SENTENCE_RE.search(prev_text))
         )
         next_text = lines[i + 1].text if i + 1 < len(lines) else ""
-        kind, number, body = _classify(line.text, at_boundary, next_text)
+        following = next((l.text for l in lines[i + 1 :] if l.text), "")
+        kind, number, body = _classify(line.text, at_boundary, next_text, following, layout)
 
         if kind == "numbered_heading":
             close()
@@ -142,16 +208,23 @@ def segment(text: str) -> list[Clause]:
                 ctx_number, ctx_heading = None, None
             draft = _Draft(number, ctx_heading, line.start, line.end)
             draft.add(line, body, new_paragraph=False)
+        elif kind == "run_in":
+            close()
+            draft = _Draft(None, number, line.start, line.end)  # number holds the label
+            draft.add(line, body, new_paragraph=False)
         else:
-            starts_paragraph = after_blank or paragraph_per_line
-            if draft is None or (draft.number is None and starts_paragraph):
+            # Bullets belong to the clause that introduces them, even when each
+            # bullet looks like its own paragraph.
+            new_clause = starts_paragraph and not _BULLET_RE.match(body)
+            if draft is None or (draft.number is None and new_clause):
                 close()
                 # Body directly under "2. Fees" (or "Section 4" + title) is clause 2.
                 number = ctx_number if prev_kind in ("heading", "numbered_heading") else None
                 draft = _Draft(number, ctx_heading, line.start, line.end)
             draft.add(line, body, new_paragraph=starts_paragraph or bool(_SUBITEM_RE.match(body)))
 
-        prev_kind, prev_text, after_blank = kind, line.text, False
+        prev_kind, prev_text = kind, line.text
+        after_blank = hard_break = False
 
     close()
     return clauses
@@ -175,17 +248,35 @@ def _line_breaks_are_paragraphs(lines: list[_Line]) -> bool:
     return statistics.median(non_blank) >= _PARAGRAPH_LINE_MIN_MEDIAN
 
 
-def _classify(text: str, at_boundary: bool, next_text: str) -> tuple[str, str | None, str]:
-    """Return (kind, number, body) for a non-blank line."""
-    if at_boundary:
-        numbered = _match_number(text)
-        if numbered:
-            number, rest = numbered
-            if not rest or _is_heading(rest, next_text):
-                return "numbered_heading", number, rest
-            return "numbered", number, rest
-        if _is_heading(text, next_text):
-            return "heading", None, text
+def _p90(values: list[int]) -> float | None:
+    if len(values) < 5:
+        return None
+    return statistics.quantiles(values, n=10, method="inclusive")[-1]
+
+
+def _classify(
+    text: str, at_boundary: bool, next_text: str, following: str, layout: _Layout
+) -> tuple[str, str | None, str]:
+    """Return (kind, number or run-in label, body) for a non-blank line.
+
+    `next_text` is the next line ("" if blank or end); `following` is the next
+    non-blank line, which may sit across a page break.
+    """
+    if not at_boundary:
+        return "text", None, text
+    numbered = _match_number(text)
+    if numbered:
+        number, rest = numbered
+        if not rest or (
+            _is_heading(rest, next_text, following) and not layout.fills_line(text, following)
+        ):
+            return "numbered_heading", number, rest
+        return "numbered", number, rest
+    if _is_heading(text, next_text, following) and not layout.fills_line(text, following):
+        return "heading", None, text
+    label = _match_run_in(text)
+    if label:
+        return "run_in", label, text
     return "text", None, text
 
 
@@ -201,7 +292,23 @@ def _match_number(text: str) -> tuple[str, str] | None:
     return number, rest
 
 
-def _is_heading(text: str, next_text: str) -> bool:
+def _match_run_in(text: str) -> str | None:
+    match = _RUN_IN_RE.match(text)
+    if not match:
+        return None
+    label = match.group("label").strip()
+    words = label.split()
+    if match.group("sep") == ".":
+        # "Agreed. We..." is a short sentence, and "ANY KIND. WITHOUT..." is
+        # all-caps body text, not a label.
+        if len(words) < 2 or _is_caps(text):
+            return None
+    if len(words) > _MAX_RUN_IN_WORDS or not _is_title_or_caps(words):
+        return None
+    return label
+
+
+def _is_heading(text: str, next_text: str, following: str) -> bool:
     if len(text) > _MAX_HEADING_CHARS or text.endswith(_HEADING_END_PUNCT):
         return False
     words = text.split()
@@ -210,14 +317,18 @@ def _is_heading(text: str, next_text: str) -> bool:
     first_alpha = next((c for c in text if c.isalpha()), None)
     if first_alpha is None or not first_alpha.isupper():
         return False
-    if next_text and next_text[0].islower():
-        return False  # sentence wraps onto the next line
+    if following and following[0].islower():
+        return False  # sentence wraps onto the next line, possibly across a page break
     return not next_text or _match_number(next_text) is not None or _is_title_or_caps(words)
 
 
+def _is_caps(text: str) -> bool:
+    letters = [c for c in text if c.isalpha()]
+    return len(letters) >= 3 and all(c.isupper() for c in letters)
+
+
 def _is_title_or_caps(words: list[str]) -> bool:
-    letters = [c for w in words for c in w if c.isalpha()]
-    if letters and all(c.isupper() for c in letters):
+    if _is_caps(" ".join(words)):
         return True
     significant = [w for w in words if w[0].isalpha() and len(w) > 3] or words
     return all(w[0].isupper() for w in significant if w[0].isalpha())

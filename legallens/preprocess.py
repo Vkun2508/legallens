@@ -8,6 +8,7 @@ lines and numbering, because the segmenter relies on them.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from pathlib import Path
 
 # Lines that are only page furniture: "3", "- 3 -", "Page 3", "Page 3 of 10".
@@ -15,6 +16,14 @@ _PAGE_NUMBER_RE = re.compile(r"^\s*(?:-\s*\d+\s*-|(?:page\s+)?\d+(?:\s+of\s+\d+)
 # Word broken across lines by a hyphen, e.g. "agree-\nment". Only joined when
 # both sides are lowercase, so real compounds like "Third-\nParty" survive.
 _HYPHEN_BREAK_RE = re.compile(r"([a-z])-\n([a-z])")
+# Glyphs some PDF fonts extract as control characters (e.g. section numbers as NUL).
+_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0e-\x1f\x7f]")
+# What is left of a numbered line whose digits were lost: ". Privacy".
+_ORPHAN_MARKER_RE = re.compile(r"^[.)]\s+(?=\S)")
+# A bullet glyph the font could not map comes out as U+FFFD at line start.
+_LOST_BULLET_RE = re.compile(r"^�\s+")
+_MIN_PAGES_FOR_RUNNING_LINES = 3
+_EDGE_LINES = 2
 
 
 def load_document(path: str | Path) -> str:
@@ -36,20 +45,58 @@ def _extract_pdf_text(path: Path) -> str:
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise ImportError("PDF support needs pypdf: pip install pypdf") from exc
     reader = PdfReader(path)
-    # Separate pages with a blank line so a page break never glues two clauses.
-    return "\n\n".join(page.extract_text() or "" for page in reader.pages)
+    pages = strip_running_lines([page.extract_text() or "" for page in reader.pages])
+    # Separate pages with a blank line; the segmenter treats a blank line after
+    # an unfinished sentence as a page break rather than a paragraph break.
+    return "\n\n".join(pages)
+
+
+def strip_running_lines(pages: list[str]) -> list[str]:
+    """Remove running headers/footers: lines repeated at the top or bottom of most pages."""
+    if len(pages) < _MIN_PAGES_FOR_RUNNING_LINES:
+        return pages
+    counts: Counter[str] = Counter()
+    for page in pages:
+        counts.update({_running_key(line) for line in _edge_lines(page)})
+    threshold = max(_MIN_PAGES_FOR_RUNNING_LINES, len(pages) // 2)
+    repeated = {key for key, n in counts.items() if n >= threshold}
+
+    cleaned = []
+    for page in pages:
+        edges = set(_edge_lines(page))
+        cleaned.append(
+            "\n".join(
+                line
+                for line in page.split("\n")
+                if not (line.strip() in edges and _running_key(line) in repeated)
+            )
+        )
+    return cleaned
+
+
+def _edge_lines(page: str) -> list[str]:
+    lines = [line.strip() for line in page.split("\n") if line.strip()]
+    return lines[:_EDGE_LINES] + lines[-_EDGE_LINES:]
+
+
+def _running_key(line: str) -> str:
+    # Digits vary across pages ("Page 3", "Terms - 4"), so compare without them.
+    return re.sub(r"\d+", "#", re.sub(r"\s+", " ", line.strip().lower()))
 
 
 def normalize_text(text: str) -> str:
     """Clean extracted text while preserving the structure segmentation needs."""
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\f", "\n\n")
     text = text.replace(" ", " ").replace("­", "")  # nbsp, soft hyphen
+    text = _CONTROL_RE.sub("", text)
     text = re.sub(r"[‘’]", "'", text)
     text = re.sub(r"[“”]", '"', text)
 
     lines = []
     for line in text.split("\n"):
         line = re.sub(r"[ \t]+", " ", line).strip()
+        line = _ORPHAN_MARKER_RE.sub("", line)
+        line = _LOST_BULLET_RE.sub("• ", line)
         if _PAGE_NUMBER_RE.match(line):
             line = ""
         lines.append(line)

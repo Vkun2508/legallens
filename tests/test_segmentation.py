@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from legallens.preprocess import load_document, normalize_text
+from legallens.preprocess import load_document, normalize_text, strip_running_lines
 from legallens.segmentation import segment
 
 SAMPLE = Path(__file__).resolve().parent.parent / "data" / "samples" / "sample_tos.txt"
@@ -109,6 +109,98 @@ def test_one_paragraph_per_line_without_blank_lines():
 def test_normalize_removes_page_numbers_and_rejoins_hyphenated_words():
     raw = "1. You must accept the agree-\nment terms.\nPage 3 of 10\n\r\n\n\n2. Next clause."
     assert normalize_text(raw) == "1. You must accept the agreement terms.\n\n2. Next clause."
+
+
+def test_page_break_mid_sentence_does_not_split():
+    text = "1. You may cancel your subscription 3 days prior to your\n\nnext delivery date."
+    assert [c.text for c in segment(text)] == [
+        "You may cancel your subscription 3 days prior to your next delivery date."
+    ]
+
+
+def test_lowercase_line_after_abbreviation_continues_sentence():
+    text = "Fees apply to purchases made in a currency other than U.S.\n\ndollars) and to cash advances."
+    assert len(segment(text)) == 1
+
+
+def test_list_stays_with_its_intro_across_blank_line():
+    text = "You agree that you will not:\n\na. copy the Service; or\nb. resell the Service."
+    assert [c.text for c in segment(text)] == [
+        "You agree that you will not:\na. copy the Service; or\nb. resell the Service."
+    ]
+
+
+def test_wrapped_all_caps_line_is_not_a_heading():
+    text = (
+        "LIMITATION OF LIABILITY\n"
+        "TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SERVICE IS PROVIDED AS IS\n"
+        "WITHOUT WARRANTY OF ANY KIND, AND WE MAKE NO REPRESENTATION THAT THE\n"
+        "SERVICE WILL BE SECURE, THAT IT WILL BE ERROR FREE, OR THAT THE SERVICE\n"
+        "\n"
+        "WILL NOT INFRINGE THE RIGHTS (INCLUDING, WITHOUT LIMITATION, INTELLECTUAL\n"
+        "PROPERTY RIGHTS) OF ANY PERSON OR CAUSE ANY DAMAGE TO YOUR EQUIPMENT.\n"
+    )
+    clauses = segment(text)
+    assert [(c.number, c.heading) for c in clauses] == [(None, "LIMITATION OF LIABILITY")]
+    assert "THE SERVICE WILL NOT INFRINGE" in clauses[0].text
+
+
+def test_short_sentence_final_line_ends_paragraph_without_blank_lines():
+    text = "\n".join([
+        "We collect your name, email address and payment details when you register for",
+        "an account with us.",
+        "You must contact us about billing errors in writing, and you must do so:",
+        "• Within 60 days after the error appeared on your statement.",
+        "• At least 3 business days before a scheduled payment.",
+        "You can ask us to delete your account at any time by contacting customer support",
+        "through the help centre.",
+    ])
+    clauses = segment(text)
+    assert len(clauses) == 3
+    assert clauses[1].text.splitlines() == [
+        "You must contact us about billing errors in writing, and you must do so:",
+        "• Within 60 days after the error appeared on your statement.",
+        "• At least 3 business days before a scheduled payment.",
+    ]
+
+
+def test_run_in_labels_start_clauses():
+    text = "\n".join([
+        "6. RESEARCH FEE: You agree to pay $3 for each copy of a sales slip you request.",
+        "Default: We may close your Account if you fail to pay any amount when it is due.",
+        "Use of the Card. You may use the Card to obtain goods and services from merchants.",
+        "Calculation of Monthly Periodic Rate:",
+        "A. The monthly rate is the annual rate divided by 12.",
+    ])
+    assert _summary(text) == [
+        ("6", None),
+        (None, "Default"),
+        (None, "Use of the Card"),
+        (None, "Calculation of Monthly Periodic Rate"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "ANY KIND. WITHOUT LIMITING THE FOREGOING, WE DISCLAIM ALL WARRANTIES.",
+        "Agreed. We will deliver the goods within ten business days.",
+        "Please read carefully: These Terms are a binding agreement.",
+    ],
+)
+def test_sentences_are_not_run_in_labels(text):
+    assert _summary(text) == [(None, None)]
+
+
+def test_strip_running_lines_removes_repeated_headers_and_footers():
+    bodies = ["We may share data.", "Fees renew monthly.", "You may cancel.", "Disputes go to arbitration."]
+    pages = [f"703762.6\n{body}\nAcme Terms - {n}" for n, body in enumerate(bodies, 1)]
+    assert strip_running_lines(pages) == bodies
+
+
+def test_normalize_recovers_from_lost_glyphs():
+    raw = "\x00\x00. Privacy\nWe never sell your data.\n� Item one"
+    assert normalize_text(raw) == "Privacy\nWe never sell your data.\n• Item one"
 
 
 def test_empty_text():
