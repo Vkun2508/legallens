@@ -71,7 +71,7 @@ _NUMBERED_RE = re.compile(
 )
 # "Default: We may...", "Use of the Card. You may..."; label checked separately.
 _RUN_IN_RE = re.compile(
-    r"^(?P<label>[A-Z][A-Za-z0-9'&/,\-\u2013\ufffd ]{2,48}?)(?P<sep>[:.])(?:\s+(?=[A-Z(\"'$0-9])|$)"
+    r"^(?P<label>[A-Z][A-Za-z0-9'&/,\-\u2013 ]{2,48}?)(?P<sep>[:.])(?:\s+(?=[A-Z(\"'$0-9])|$)"
 )
 _SUBITEM_RE = re.compile(r"^(?:\(?(?:[a-z]|[ivx]+)\)|(?:[a-z]|[ivx]+)\.|[\u2022\u00b7*\-])\s")
 _BULLET_RE = re.compile(r"^[\u2022\u00b7*\-]\s")

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from legallens.preprocess import load_document, normalize_text, strip_running_lines
+from legallens.preprocess import load_bytes, load_document, normalize_text, strip_running_lines
 from legallens.segmentation import segment
 
 SAMPLE = Path(__file__).resolve().parent.parent / "data" / "samples" / "sample_tos.txt"
@@ -198,9 +198,15 @@ def test_strip_running_lines_removes_repeated_headers_and_footers():
     assert strip_running_lines(pages) == bodies
 
 
-def test_normalize_recovers_from_lost_glyphs():
-    raw = "\x00\x00. Privacy\nWe never sell your data.\n� Item one"
-    assert normalize_text(raw) == "Privacy\nWe never sell your data.\n• Item one"
+def test_normalize_recovers_from_section_numbers_lost_as_control_characters():
+    raw = "\x00\x00. Privacy\nWe never sell your data."
+    assert normalize_text(raw) == "Privacy\nWe never sell your data."
+
+
+def test_load_bytes_matches_load_document():
+    assert load_bytes(SAMPLE.read_bytes(), ".TXT") == load_document(SAMPLE)
+    with pytest.raises(ValueError, match="Unsupported file type"):
+        load_bytes(b"", ".docx")
 
 
 def test_empty_text():

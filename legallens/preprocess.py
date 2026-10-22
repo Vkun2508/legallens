@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from io import BytesIO
 from pathlib import Path
 
 # Lines that are only page furniture: "3", "- 3 -", "Page 3", "Page 3 of 10".
@@ -20,8 +21,6 @@ _HYPHEN_BREAK_RE = re.compile(r"([a-z])-\n([a-z])")
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0e-\x1f\x7f]")
 # What is left of a numbered line whose digits were lost: ". Privacy".
 _ORPHAN_MARKER_RE = re.compile(r"^[.)]\s+(?=\S)")
-# A bullet glyph the font could not map comes out as U+FFFD at line start.
-_LOST_BULLET_RE = re.compile(r"^�\s+")
 _MIN_PAGES_FOR_RUNNING_LINES = 3
 _EDGE_LINES = 2
 
@@ -29,22 +28,30 @@ _EDGE_LINES = 2
 def load_document(path: str | Path) -> str:
     """Read a .txt/.md or text-based .pdf file and return normalized text."""
     path = Path(path)
-    suffix = path.suffix.lower()
+    return load_bytes(path.read_bytes(), path.suffix)
+
+
+def load_bytes(data: bytes, suffix: str) -> str:
+    """Return normalized text from file contents, e.g. an upload held in memory.
+
+    `suffix` (".pdf", ".txt" or ".md") gives the file type.
+    """
+    suffix = suffix.lower()
     if suffix == ".pdf":
-        raw = _extract_pdf_text(path)
+        raw = _extract_pdf_text(data)
     elif suffix in {".txt", ".md", ""}:
-        raw = path.read_text(encoding="utf-8", errors="replace")
+        raw = data.decode("utf-8", errors="replace")
     else:
         raise ValueError(f"Unsupported file type: {suffix} (expected .txt, .md or .pdf)")
     return normalize_text(raw)
 
 
-def _extract_pdf_text(path: Path) -> str:
+def _extract_pdf_text(data: bytes) -> str:
     try:
         from pypdf import PdfReader
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise ImportError("PDF support needs pypdf: pip install pypdf") from exc
-    reader = PdfReader(path)
+    reader = PdfReader(BytesIO(data))
     pages = strip_running_lines([page.extract_text() or "" for page in reader.pages])
     # Separate pages with a blank line; the segmenter treats a blank line after
     # an unfinished sentence as a page break rather than a paragraph break.
@@ -96,7 +103,6 @@ def normalize_text(text: str) -> str:
     for line in text.split("\n"):
         line = re.sub(r"[ \t]+", " ", line).strip()
         line = _ORPHAN_MARKER_RE.sub("", line)
-        line = _LOST_BULLET_RE.sub("• ", line)
         if _PAGE_NUMBER_RE.match(line):
             line = ""
         lines.append(line)
