@@ -11,7 +11,8 @@ from webapp.main import MAX_PAGES, MAX_UPLOAD_BYTES, app
 
 SAMPLE = Path(__file__).resolve().parent.parent / "data" / "samples" / "sample_tos.txt"
 SAMPLE_LINES = SAMPLE.read_text(encoding="utf-8").split("\n")
-SPAN_RE = re.compile(r'<mark id="span-(\d+)"[^>]*>(.*?)</mark>', re.S)
+SPAN_RE = re.compile(r'<span class="clause-text" id="span-(\d+)">(.*?)</span>', re.S)
+TAG_RE = re.compile(r"<[^>]+>")
 
 client = TestClient(app)
 
@@ -25,6 +26,11 @@ def test_index_shows_upload_form():
     assert response.status_code == 200
     assert 'enctype="multipart/form-data"' in response.text
     assert "discarded" in response.text
+    # The landing backdrop: drifting fine print whose risky phrases are flagged at the scan line.
+    assert '<div class="scanfield" aria-hidden="true">' in response.text
+    assert '<mark class="scan-hit risk">arbitration</mark>' in response.text
+    assert '<div class="scanline" aria-hidden="true">' in response.text
+    assert 'id="theme-toggle" aria-pressed="false"' in response.text
 
 
 def test_text_upload_returns_clauses():
@@ -57,7 +63,8 @@ def test_results_page_highlights_exact_offsets():
     response = _upload("sample_tos.txt", SAMPLE.read_bytes(), path="/analyze")
     assert response.status_code == 200
     result = _upload("sample_tos.txt", SAMPLE.read_bytes()).json()
-    spans = {int(i): html.unescape(body) for i, body in SPAN_RE.findall(response.text)}
+    # Evidence is marked inside each span; the text without tags is the exact clause span.
+    spans = {int(i): html.unescape(TAG_RE.sub("", body)) for i, body in SPAN_RE.findall(response.text)}
     assert len(spans) == len(result["clauses"])
     for clause in result["clauses"]:
         assert spans[clause["index"]] == result["text"][clause["start"] : clause["end"]]
@@ -142,15 +149,18 @@ def test_api_includes_risk_for_each_clause():
 
 def test_results_page_shows_tiers_and_evidence():
     response = _upload("sample_tos.txt", SAMPLE.read_bytes(), path="/analyze")
-    assert "Risk overview" in response.text
-    assert response.text.count('class="tier-badge tier-high"') == 6
-    assert "Why flagged" in response.text
+    assert "What you're agreeing to" in response.text
+    assert response.text.count('class="row row-clause tier-high"') == 6
+    assert "Matched “binding”" not in response.text
+    assert "Matched “arbitration”, “waive any right”, “class action”" in response.text
     assert '<mark class="hit" title="Arbitration and waived rights">arbitration</mark>' in response.text
-    assert 'data-filter="high" aria-pressed="false"' in response.text
+    assert 'data-filter="high" data-label="High" aria-pressed="false"' in response.text
 
 
 def test_results_page_offers_print_summary_and_research_export():
     html = _upload("sample_tos.txt", SAMPLE.read_bytes(), path="/analyze").text
+    assert 'id="theme-toggle"' in html
+    assert "scanfield" not in html  # the scanning backdrop is for the landing page only
     assert 'id="print-summary"' in html
     assert "Export data (JSON)" in html
     assert 'id="download-json"' in html
@@ -170,7 +180,8 @@ def test_homepage_lists_categories_and_offers_sample():
     response = client.get("/")
     assert "What LegalLens flags" in response.text
     assert "Arbitration and waived rights" in response.text
-    assert "Try the sample agreement" in response.text
+    assert "Review the sample agreement" in response.text
+    assert response.text.count('class="lens"') == 1  # the hero lens over the sample
 
 
 def test_sample_agreement_form_analyzes_the_bundled_sample():
@@ -178,7 +189,7 @@ def test_sample_agreement_form_analyzes_the_bundled_sample():
 
     response = client.post("/analyze", data={"text": SAMPLE_TEXT})
     assert response.status_code == 200
-    assert response.text.count('<mark id="span-') == 9
+    assert response.text.count('class="clause-text" id="span-') == 9
 
 
 def test_warns_about_long_clauses_and_missing_numbers():

@@ -1,201 +1,181 @@
-# LegalLens design system
+# LegalLens design system (v3.2)
 
-**Direction: "law library".** LegalLens should look like something a careful
-legal reader would trust:
-- bond-paper ivory with navy-black ink;
-- Caslon type, the face of legal and parliamentary printing;
-- a seal mark;
-- double rules like a legal document header;
-- the document pane set like pleading paper, with ruled lines and a double margin rule.
+**Direction: "the fine print, under a lens".** People don't read terms because
+the text is small and dense. LegalLens is the loupe:
+- On the **homepage**, the real sample agreement is set as fine print, and you read it through a lens.
+- On the **results page**, the agreement reads like a reviewed contract: the
+document itself, with notes in the margin and a spotlight that moves from flag
+to flag.
 
-One navy accent carries action and focus. Three tier colours (oxblood, amber,
-slate) carry risk, always alongside a text label.
+**Why this replaces v2 ("law library"):** v2's cream paper, navy accent, Caslon
+display type, double rules and uppercase labels matched the look most
+generated sites default to. Its results page split the work into identical
+cards beside a side pane, which pushed the document aside. v3 makes the
+document the interface.
 
-**Why this replaces v1:** the first direction (warm editorial, oxblood accent)
-read as a magazine, not a legal tool. Navy, Caslon, seals and ruled paper are
-the visual language of courts, firms and statute books.
+**v3.2: palette from the taste skill.** The cobalt (v3) and pine/mint (v3.1)
+accents still read as AI-made. Colour now follows the VectorLab taste skill's
+**Notion** archetype, which it maps to content-first reading products: warm stone
+paper, soft grey body text, and one muted accent, here olive. Elevation comes
+from a background step and a border, not shadow.
 
-**Not based on real sites:** the UXKIN reference library failed to connect, so
-this direction comes from the brief and established legal print conventions,
-not from studying comparable sites.
+Also in v3.2:
+- **Theme toggle:** a manual light/dark switch, remembered between visits.
+- **Landing backdrop:** the all-pages drifting backdrop is replaced by a
+  landing-page scanner. The fine print drifts past a scan line in the hero, and
+  risky phrases light up red or amber as they cross it.
 
-The tokens below are implemented as CSS custom properties in
-`webapp/static/app.css`. Pages use the names, never raw values.
+**Not based on real sites:** UXKIN wasn't connected, so this direction comes
+from the brief and the subject (fine print, proofreading, the loupe), not from
+studying comparable sites.
+
+Project rules for the UI/UX skills (aesthetic reference, accessibility target,
+banned patterns, the two motion exceptions) are in `.ux-profile.md`. Tokens are CSS custom properties
+in `webapp/static/app.css`. Pages use the names, never raw values.
 
 ## Color
 
-The two themes are designed separately:
-- **Light, "bond paper":** ivory and navy-black ink.
-- **Dark, "chambers at night":** deep navy-charcoal with parchment text. The accent and tier colours are lighter here, so they keep their contrast.
+- **Archetype:** Notion, from the taste skill. Stone paper, soft grey text, one muted accent.
+- **How tokens are written:** each token holds both themes with CSS `light-dark()`.
+  - **Default:** the page follows the system theme.
+  - **Toggle:** the masthead toggle pins a theme by setting `data-theme` on `<html>`.
+  - **Remembered:** the choice is saved in `localStorage` and applied before first paint.
+  - **Print:** always light.
+- **Accent:** muted olive (sage in dark), used only for actions, links, focus, the lens and the current flag.
+- **Tiers:** Notion's muted red ("risk") and amber ("review"), plus grey. They are always shown next to their word.
 
 | Token | Light | Dark | Role |
 |---|---|---|---|
-| `--paper` | `#F7F5EF` | `#0E1420` | Page background |
-| `--surface` | `#FDFCF9` | `#151C2B` | Cards, panels, upload zone |
-| `--sunk` | `#EFECE3` | `#1B2333` | Inset areas: document pane, textarea |
-| `--ink` | `#141B2D` | `#ECE7DC` | Body text, headings, primary button fill |
-| `--ink-2` | `#4D5566` | `#A9B0BE` | Secondary text: metadata, hints, offsets |
-| `--on-ink` | `#FDFCF9` | `#0E1420` | Text on `--ink` fills |
-| `--rule` | `#D9D4C7` | `#2A3345` | Hairlines, double rules, pleading lines (decorative) |
-| `--rule-strong` | `#7F8696` | `#6B7488` | Borders that identify a control |
-| `--accent` | `#1F3B66` | `#A9C1EA` | The one accent, legal navy: links, focus, selection, seal, primary hover |
-| `--on-accent` | `#FDFCF9` | `#0E1420` | Text on `--accent` fills |
-| `--accent-tint` | `#DCE4F0` | `#263A5C` | Selected clause's highlight, drag-over fill |
-| `--span-a` / `--span-b` | `#ECE8DD` / `#E4DFD2` | `#1F2838` / `#252F41` | Unflagged clause highlights, alternating |
-| `--high` / `--high-tint` | `#8C1D18` / `#F6DFDB` | `#F0A49A` / `#4A2226` | Tier High ("Review closely"): badge text and border / fill, document highlight |
-| `--medium` / `--medium-tint` | `#7A5300` / `#F6EACB` | `#E5C07A` / `#3F3218` | Tier Medium ("Worth knowing"); also per-document warnings |
-| `--low` / `--low-tint` | `#4A5568` / `#E4E8EF` | `#B9C2D0` / `#2A3344` | Tier Low ("For awareness") |
-| `--error-bg` / `--error-rule` | `#F8E1DA` / `#B4432C` | `#3E241E` / `#D0705A` | Upload errors |
-| `--lift-border` | = `--rule-strong` | `#8A93A6` | Border of lifted things. Brighter in dark, where shadows barely show |
-| `--shimmer` | `rgb(255 255 255 / .6)` | `rgb(255 255 255 / .06)` | Skeleton shimmer (decorative) |
+| `--desk` | `#F7F6F3` | `#191919` | L0 page background, stone / charcoal (set on `html`) |
+| `--sheet` | `#FFFFFF` | `#202020` | L1: the document, tables, inputs, upload zone |
+| `--ink` | `#37352F` | `#E3E2E0` | Text |
+| `--ink-2` | `#64635E` | `#9B9A97` | Secondary text, notes, headings between clauses |
+| `--rule` | ink at 9% | white at 9.4% | Hairlines, the margin rule |
+| `--rule-strong` | `#8C8B86` | `#6F6E6B` | Borders that identify a control |
+| `--lens` / `--on-lens` | `#5E6B3A` / `#FFFFFF` | `#B5C08A` / `#191919` | The one accent: olive / sage |
+| `--lens-tint` | `#EEF0E3` | `#2F3322` | Pressed filter, drag-over |
+| `--current` | `#F7F8F0` | `#24261F` | Background of the clause in the spotlight |
+| `--high` / `--high-tint` | `#B83A35` / `#FDEBEC` | `#FF8A80` / `#45282A` | High ("review closely"); risk red. Also errors and the scan line |
+| `--medium` / `--medium-tint` | `#8A5A0F` / `#FBF3DB` | `#E8B85C` / `#45391F` | Medium ("worth knowing"); review amber. Also warnings |
+| `--low` / `--low-tint` | `#64635E` / `#F1F1EF` | `#9B9A97` / `#2C2C2C` | Low ("for awareness"); grey |
+| `--scan-ink` | ink at 11% | text at 10% | The faint drifting fine print on the landing page |
 
-**Tier colours carry meaning only with words.** Every tier colour appears next
-to its text label ("High · Review closely"), and the document pane has a legend.
-"No flags" means no watched terms were found. It never means "safe".
+**Measured contrast** (WCAG 2.1, every pair the pages use):
+- **Text:** at least 4.95:1 in light and 4.61:1 in dark, including each tier colour on the sheet, the desk and its own tint.
+- **Controls and focus rings:** at least 3.16:1.
 
-**Measured contrast (WCAG 2.1, 43 pairs per theme):**
-- **Text:** 5.62:1 or higher in light and 5.74:1 or higher in dark (minimum 4.5:1). This includes each tier colour on paper, on the card surface and on its own tint.
-- **Controls, focus rings and tier bars:** 3.09:1 or higher (minimum 3:1).
+"No flags" means no watched phrase was found. It never means "safe".
 
 ## Typography
 
-All fonts are self-hosted from `webapp/static/fonts/` and OFL-licensed. No
-third-party font requests are made.
+Self-hosted, OFL-licensed, with no third-party requests. Weights are 400, 500
+and 600 only. Hierarchy comes from size, not weight.
 
 | Token | Size / line height | Face | Use |
 |---|---|---|---|
-| `--text-display` | 3.5rem / 1.05 | Libre Caslon Display | Homepage title |
-| `--text-h1` | 2.25rem / 1.1 | Libre Caslon Display | Results title (file name) |
-| `--text-h2` | 1.5rem / 1.25 | Libre Caslon Text 400 | Section and pane titles, wordmark. Display's hairlines break up below ~40px |
-| `--text-h3` | 1.125rem / 1.35 | Libre Caslon Text 700 | Card titles, step titles |
-| `--text-lead` | 1.25rem / 1.55 | Libre Caslon Text 400 | Intro paragraph |
-| `--text-body` | 1.0625rem (17px) / 1.6 | Source Sans 3 400/600 | Interface copy, controls |
-| `--text-doc` | 1rem / 2rem | Libre Caslon Text 400 | Document text on pleading lines (fixed 2rem line pitch) |
-| `--text-small` | 0.9375rem / 1.5 | Source Sans 3 | Metadata, hints |
-| `--text-label` | 0.8125rem / 1.4 | Source Sans 3 600, uppercase, tracking 0.08em | Eyebrows, tier badges, "small caps" labels |
+| `--step-6` | 2.986rem / 1.1 | Libre Caslon Text | Homepage headline (`--step-5` below 768px) |
+| `--step-5` | 2.488rem / 1.1 | Libre Caslon Text | Results title (file name) |
+| `--step-3` | 1.728rem / 1.2 | Libre Caslon Text | Section titles |
+| `--step-2` / `--step-1` | 1.44rem / 1.2 · 1.2rem / 1.25 | Libre Caslon Text | Sub-heads, step titles, wordmark |
+| `--text-body` | 1rem / 1.55 | Source Sans 3 | Interface copy and controls |
+| document | 1rem / 1.7 | Libre Caslon Text | Clause text: open leading for legal reading |
+| `--text-secondary` | 0.875rem / 1.4–1.5 | Source Sans 3 | Margin notes, hints, filters |
+| `--text-meta` | 0.75rem / 1.4–1.45 | either | Offsets, `kbd`, the homepage fine print. This is the floor |
 
-- **Clause numbers** are set with a section mark: "§ 2.1". Unnumbered clauses
-  show "§ —" plus an italic "no number".
-- **Numbers:** offsets and counts use tabular figures.
-- **Prose:** capped at 68ch, and headings use `text-wrap: balance`.
+- **Clause references:** "§ 2.1". An unnumbered clause is "Clause 7", by its position.
+- **Case:** sentence case everywhere. No uppercase labels.
+- **Numbers:** counts and offsets use tabular figures.
 
 ## Spacing and layout
 
-- **Scale (4px base):** `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-5` 24, `-6` 32, `-7` 48,
-  `-8` 64, `-9` 96 (px).
-- **Widths:** `--measure-wide` 88rem for results, 72rem for the homepage.
-- **Page gutter:** 16px on phones, 32px from 720px up.
-- **Homepage:** a two-column hero (copy and actions on the left, the animated
-  review illustration on the right) from 960px up, stacked below that. Then come:
-  - **How it works:** a three-step § sequence joined by a rule.
-  - **What LegalLens flags:** a ledger table of categories grouped by tier.
-  - **Upload form:** anchored at `#analyze`.
-  - **Privacy and scope notes.**
-- **Results page:**
-  - The header shows the file name with a seal and the actions.
-  - Next comes the risk summary: tier counts, a stacked tier bar, filters and category tallies.
-  - Then the warnings and the limits note.
-  - Then two panes: clause cards (2fr) and the pleading-paper document (3fr).
+- **Scale:** `--space-1` 4, `-2` 8, `-3` 12, `-4` 16, `-6` 24, `-8` 32, `-12` 48, `-16` 64, `-24` 96 (px).
+- **Breakpoints:** narrow below 768px, wide from 768px up. `main` is capped at 1280px; the chrome is not.
+- **Gutter:** 16px narrow, 32px wide.
+- **Homepage** (route type Home/landing):
+  1. **Hero:** the copy beside a stage holding the sheet with its lens and margin tag.
+  2. **How it works:** one real clause in three states.
+  3. **What it flags:** a framed table.
+  4. **Upload.**
+  5. **Notes.**
+- **Results** (Pattern 2, Detail/Record):
+  1. **Header:** file name, a status sentence, actions.
+  2. **"What you're agreeing to":** one line per flagged category, linking to its clauses.
+  3. **"How to read these results".**
+  4. **Toolbar:** sticky from 768px; filters, fold toggle, flag navigation.
+  5. **Reader:** the minimap rail and the sheet.
+     - **Sheet:** each clause is a grid row of text plus a 15rem margin note, and a margin rule runs down the sheet.
+     - **Below 768px:** notes drop under their clause, the rail is hidden, and flag navigation is pinned to the bottom.
 
 ## Shape and depth
 
-- **Radius:** `--radius-sm` 2px (badges, highlights, inputs), `--radius-md` 4px
-  (cards, buttons), `--radius-lg` 8px (upload zone). These are tighter than v1:
-  legal print is square-cornered.
-- **Rules:** the masthead and section heads use a double rule (3px apart).
-- **Shadow:** `--shadow-lift` is the only one. It's used for hover lift and the selected card.
+- **Radius:** 2px for the sheet, tables and badges; 6px for controls; the lens is round.
+- **Elevation:** a 1px border first, then one shadow: `--shadow-sheet` (alpha ≤ 0.06) in light, and an inset top highlight in dark.
 
 ## Motion
 
-Motion shows review happening: a page being read, marks being made, findings
-being tallied. It never loops for its own sake, except the homepage
-illustration, which is the product demo.
-
-| Token | Value | Use |
-|---|---|---|
-| `--dur-fast` | 120ms | Colour, border, focus |
-| `--dur-base` | 220ms | Lift, expand/collapse, filters |
-| `--dur-enter` | 420ms | Cards, sections and highlights entering |
-| `--ease-out` | `cubic-bezier(.2, .7, .2, 1)` | Arrivals, openings |
-| `--ease-in-out` | `cubic-bezier(.6, 0, .3, 1)` | Collapses, loops |
-| `--stagger` | 35ms, capped at the 12th item | Lists |
+Tokens: 100 / 150 / 200 / 300ms. Ease-out on entry, ease-in on exit. Only
+transform and opacity animate (colour and border changes take ≤150ms).
 
 | Where | What moves |
 |---|---|
-| Seal mark | The double ring draws itself once on load (stroke-dashoffset) |
-| Homepage hero | A mini document is "reviewed" on an 8s loop: a reading line moves down the page, clause highlights sweep in like a marker pen, and tier tags stamp in |
-| Homepage sections | Fade and rise 12px as they scroll into view (IntersectionObserver) |
-| Upload zone | Lift on hover; marching dashed border on drag-over; the chosen file name slides in |
-| Loading | Skeleton with shimmer; the seal turns slowly |
-| Risk summary | Counts tick up from 0, and the tier bar segments grow in order |
-| Clause cards | Staggered fade and rise; tier badges stamp in (scale 1.15 → 1); smooth expand/collapse; filtering fades cards out and in |
-| Document pane | Each clause highlight sweeps left to right like a marker as it scrolls into view |
+| Homepage lens | **Pointer:** follows it, one frame per pointer move, writing transforms only. **Keyboard:** arrow keys move it 24px. **Previous/Next flag and touch taps:** a 300ms glide. **On load:** one 900ms pass, the first exception (see `.ux-profile.md`) |
+| Margin tag | Slides level with the clause under the lens (200ms) |
+| Spotlight | The other rows fade to 45% (200ms) |
+| Buttons, filters, upload zone | Border and background colour (150ms) |
+| Pop press | `scaleY(0.95)` from the base, 100ms ease-out. The bottom edge snaps from 3px to 1px (layout is not animated) |
+| Loading | Shown after 100ms. The skeleton pulses (the only functional loop) |
+| Landing scanner | The fine print drifts up one screen every 90s (Web Animations, on the compositor). Each risky phrase takes its highlight (150ms fade) as it crosses the hero's scan line. Pauses when the tab is hidden. The second documented exception. Measured: 144 fps, worst frame 7.6ms |
 
-**`prefers-reduced-motion: reduce`:**
-- **Off:** everything above. The hero shows its finished state, numbers appear at their final value, and highlights are already drawn.
-- **Kept:** state changes (filtering, expansion, selection) still happen, instantly.
+**Under `prefers-reduced-motion: reduce`:** every state still changes, instantly.
+The lens starts parked on a flag and only moves when asked. The skeleton is
+static. The scanner doesn't drift: phrases above the scan line show as flagged,
+and scrolling still moves the line.
 
 ## Components
 
 - **Masthead:**
-  - **Wordmark:** a seal (a double ring with a § glyph) and "LegalLens" in Caslon Text.
-  - **Tagline:** in `--ink-2`.
-  - **Rule:** a double hairline beneath.
+  - **Wordmark:** a lens mark (a ring with a § and a handle) and "LegalLens".
+  - **Theme toggle:** a 44px icon button (moon or sun), labelled "Dark theme", with `aria-pressed` and a "Switch to … theme" tooltip.
+  - **Links:** two nav links and the primary "Upload an agreement".
+  - **Below 768px:** the links fold into a Menu button, and the primary button reads "Upload".
 - **Buttons:**
-  - **Primary:** an `--ink` fill that becomes `--accent` on hover.
-  - **Secondary:** a `--surface` fill with a `--rule-strong` border.
-  - **Size:** all buttons are at least 44px tall, `--radius-md`, Source Sans 600.
-  - **Arrow:** primary buttons that lead somewhere have an arrow that nudges 3px on hover.
-- **Links:** `--accent`, underline 1px with a 0.2em offset, 2px on hover.
-- **Focus:** 2px `--accent` outline with a 2px offset. Two exceptions:
-  - **Card buttons:** the ring is inset by 3px.
-  - **Upload zone:** shows the ring via `:has(input:focus-visible)` (keyboard focus only).
-- **Tier badge:**
-  - **Look:** `--text-label` uppercase, the tier colour as text and a 1px border, on the tier tint.
-  - **Content:** "High", "Medium", "Low" or "No flags", followed by the qualifier in normal case.
-  - **Shape:** square cornered, like a stamp.
-- **Category chip:** a small Source Sans 600 label on `--surface` with a `--rule` border.
-- **Evidence marks:** matched phrases in card text are underlined 2px in the
-  clause's tier colour, and listed under "Why flagged".
-- **Risk summary:**
-  - **Counts:** four tier counts in Caslon Display numerals.
-  - **Bar:** a stacked tier bar, 10px tall, `--radius-sm`, with segments in tier colours. Unflagged clauses are drawn in `--rule`.
-  - **Filters:** buttons with `aria-pressed` (All, High, Medium, Low, No flags), and a live "Showing N of M" line.
-  - **Tallies:** category counts.
-- **Clause card:**
-  - **Look:** `--surface`, a `--rule` border and a 4px left border in the tier colour (unflagged: `--rule`).
-  - **Title:** the title button holds "§ number", the heading, the tier badge and a chevron.
-  - **Body:** a four-line preview that expands to the full text.
-  - **Expanded:** adds the category chips and "Why flagged".
-  - **Offsets:** in `--ink-2` tabular numbers.
-  - **"long" badge:** unchanged.
-- **Document pane (pleading paper):**
-  - **Paper:** `--sunk` background with ruled lines every 2rem (a `--rule` hairline) and a double vertical margin rule on the left.
-  - **Highlights:** clause highlights use the tier tint (unflagged: alternating `--span-a`/`--span-b`).
-  - **Selected clause:** `--accent-tint` with a 2px `--accent` underline.
-  - **Legend:** a legend above the pane names each colour.
-- **Print summary:** the reader-friendly export.
-  - **Opening it:** the primary "Print summary" button in the results header calls the browser's print dialog, which also offers "Save as PDF". A hint says so.
-  - **What prints:** everything else on the page is hidden. The summary shows a header (seal, file name, date, tier counts), then the flagged clauses grouped High → Medium → Low, then the number of unflagged clauses and the disclaimer.
-  - **Clause entries:** each one shows its § number and heading, the categories with their matched phrases, and the full text, with a left rule in the tier colour.
-  - **Colours:** print always uses the light tokens on white.
-- **Research export:** a quiet "For research" section at the foot of the results
-  page. It holds an "Export data (JSON)" link-style button (at least 44px tall) and one sentence on what the file contains.
-- **Homepage illustration:** built in HTML and CSS (no image). It's hidden from screen readers, and the copy next to it says the same thing.
-- **Alerts, limits note, skeleton, footer:** as in v1, re-tokened.
+  - **Primary:** a lens fill.
+  - **Secondary:** a sheet fill with a `--rule-strong` border.
+  - **Size:** both are at least 44px tall, Source Sans 500.
+  - **No arrows.**
+  - **Pop press (from the user's PopButton component):** applies to buttons, filters and Menu.
+    - **Rest:** a 3px bottom edge, a darker olive on primary buttons and `--rule-strong` on the rest.
+    - **Press:** the edge thins to 1px and the button squashes to `scaleY(0.95)` from its base.
+    - **Toggled filters:** they rest pressed in.
+- **Tier badge:** an 8px square in the tier colour, then the tier name in Source Sans 600 and the tier colour, optionally followed by ", review closely". There is no pill.
+- **Fine print and lens (homepage):**
+  - **Base sheet:** the sample rendered twice. The base sheet hides evidence.
+  - **Lens copy:** the copy inside the lens (scale 2, clipped to a circle with `border-radius` and `overflow: hidden`) shows it with the tier tint.
+  - **Without JS:** the base sheet shows the evidence.
+- **Annotated document (results):**
+  - **Text:** clause text in Caslon. Flagged clauses carry a 3px tier rule at the left, and evidence is underlined 2px in the tier colour.
+  - **Margin note:** the tier badge; then each category's name, description and the phrases it matched; then the clause reference and offsets.
+- **Spotlight:** the current clause gets `--current`, a 3px lens rule and tinted evidence. Keys: `j`/`k` move between flags (ignored while typing), Esc clears.
+- **Minimap rail:** one tick per row, as tall as the row and coloured by tier. A lens-outlined window shows the visible part. It is mouse-only (`aria-hidden`); the brief's links and Previous/Next are the keyboard path.
+- **Landing scanner** (homepage only):
+  - **Scanfield:** a fixed, `aria-hidden` layer of the sample's fine print. It is 12px Caslon in `--scan-ink`, faded at the top and bottom edges.
+  - **Phrases:** each risky phrase is a `mark.scan-hit`, red (`risk`) for High and amber (`review`) for Medium and Low.
+  - **Scan line:** a 2px `--high` line across the hero at 58% of its height, with a 32px fading band and a "Scanning" label.
+  - **The flagging rule:** a phrase is flagged exactly when it is above the line. It is purely positional, so the loop of two identical copies has no seam.
+  - **Readability:** a feathered patch of desk colour behind the hero copy keeps it readable over the highlights.
+  - **Print:** hidden.
+- **Print summary:** unchanged in structure. Light tokens on white, headings in Source Sans 600.
 
 ## Imagery and icons
 
-- **No photos and no stock illustration.**
-- **Icons:** inline SVGs with a 1.5px stroke that use `currentColor`. They are the seal, the upload glyph, the chevron and the arrow. No emoji.
-- **Favicon:** the seal on `--accent`.
+No photos and no illustration. The homepage's only visual is the real sample
+agreement. Icons are inline SVG with a 1.5px stroke and `currentColor`. The
+favicon is the lens mark on olive.
 
 ## Accessibility rules
 
-- Re-check contrast for any new colour pair. Every tier colour has a text label beside it.
-- Interactive targets are at least 44×44px.
-- The visible focus ring is never removed.
-- Keyboard order follows reading order.
-- Filters use `aria-pressed` and announce the result count.
-- Decorative motion and illustrations are `aria-hidden`.
-- All motion respects `prefers-reduced-motion`.
+- **Contrast:** re-check it for any new colour pair. Tier colours always appear next to their word.
+- **Targets:** at least 44×44px.
+- **Focus:** `:focus-visible` is a 2px lens outline with a 2px offset, and it is never removed.
+- **Keyboard:** tab order follows reading order. The lens is a focusable group with an arrow-key hint in its label, and its tag is `aria-live`. Flag moves are announced through a status region.
+- **Hidden from screen readers:** decorative visuals (the fine-print sheet, the lens, the rail) are `aria-hidden`.

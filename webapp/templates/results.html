@@ -1,70 +1,32 @@
 {% extends "base.html" %}
-{% from "macros.html" import seal, tier_badge %}
+{% from "macros.html" import mark, segments, tier_badge %}
+{% macro ref(clause) -%}
+{{ "§ " ~ clause.number if clause.number else "Clause " ~ (clause.index + 1) }}
+{%- endmacro %}
 {% block title %}{{ analysis.source }} - LegalLens{% endblock %}
-{% block main_class %}page page-wide{% endblock %}
+{% block main_class %}page page-results{% endblock %}
 {% block content %}
-<div class="results-header screen-only">
-  <div class="results-heading">
-    {{ seal("seal-draw seal-large") }}
-    <div>
-      <p class="eyebrow">Review of</p>
-      <h1>{{ analysis.source }}</h1>
-      <p class="summary">
-        {{ analysis.clauses | length }} clauses in {{ "{:,}".format(analysis.text | length) }} characters
-        · {{ summary.flagged }} flagged for a closer read
-      </p>
-    </div>
+{% set total = analysis.clauses | length %}
+{% set parts = [] %}
+{% for t in summary.tiers if t.key != "none" and t.count %}{% set _ = parts.append(t.count ~ " " ~ tier_labels[t.key][0] | lower) %}{% endfor %}
+
+<header class="results-head screen-only">
+  <div class="results-title">
+    <h1>{{ analysis.source }}</h1>
+    <p class="status">
+      {% if not total %}No clauses were found.
+      {% elif parts %}{{ summary.flagged }} of {{ total }} clauses are flagged: {{ parts[:-1] | join(", ") }}{{ " and " if parts | length > 1 }}{{ parts[-1] }}.
+      {% else %}None of the {{ total }} clauses matched a watched phrase.{% endif %}
+    </p>
   </div>
   <div class="actions">
-    {% if analysis.clauses %}
-    <button type="button" class="button button-primary" id="print-summary" aria-describedby="print-hint">
-      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-           stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6V2h8v4M4 12H2.5V7.5A1.5 1.5 0 0 1 4 6h8a1.5 1.5 0 0 1 1.5 1.5V12H12M4 9.5h8V14H4z"/></svg>
-      Print summary
-    </button>
+    {% if total %}
+    <button type="button" class="button button-primary" id="print-summary" aria-describedby="print-hint">Print summary</button>
     {% endif %}
-    <a class="button" href="{{ url_for('index') }}#analyze">Analyze another</a>
-    {% if analysis.clauses %}
-    <p class="hint actions-hint" id="print-hint">Lists every flagged clause. Choose "Save as PDF" in the print dialog to keep a copy.</p>
-    {% endif %}
+    <a class="button" href="{{ url_for('index') }}#analyze">Review another agreement</a>
+    {% if total %}<p class="hint" id="print-hint">Lists every flagged clause. Choose "Save as PDF" in the print dialog to keep a copy.</p>{% endif %}
   </div>
-</div>
-
-{% if analysis.clauses %}
-<section class="risk-summary screen-only" aria-labelledby="risk-title" data-reveal>
-  <h2 class="section-title" id="risk-title">Risk overview</h2>
-  <div class="tier-counts">
-    {% for t in summary.tiers %}
-    <div class="tier-count tier-{{ t.key }}">
-      <span class="count" data-count="{{ t.count }}" aria-hidden="true">{{ t.count }}</span>
-      <span class="visually-hidden">{{ t.count }}</span>
-      <span class="tier-name">{{ tier_labels[t.key][0] }}</span>
-      <span class="tier-hint">{{ tier_labels[t.key][1] }}</span>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="tier-bar" role="img"
-       aria-label="{% for t in summary.tiers %}{{ tier_labels[t.key][0] }}: {{ t.count }}{{ ', ' if not loop.last }}{% endfor %}">
-    {% for t in summary.tiers if t.count %}<span class="seg tier-{{ t.key }}" style="width: {{ t.percent }}%; --i: {{ loop.index0 }}"></span>{% endfor %}
-  </div>
-
-  <div class="filters" role="group" aria-label="Show clauses by tier">
-    <button type="button" class="filter" data-filter="all" aria-pressed="true">All <span class="filter-count">{{ analysis.clauses | length }}</span></button>
-    {% for t in summary.tiers if t.count %}
-    <button type="button" class="filter tier-{{ t.key }}" data-filter="{{ t.key }}" aria-pressed="false">{{ tier_labels[t.key][0] }} <span class="filter-count">{{ t.count }}</span></button>
-    {% endfor %}
-  </div>
-  <p class="filter-status" id="filter-status" role="status" aria-live="polite">Showing all {{ analysis.clauses | length }} clauses.</p>
-
-  {% if summary.categories %}
-  <ul class="tally" aria-label="Clauses per category">
-    {% for category, count in summary.categories %}
-    <li><span class="chip tier-{{ category.tier }}">{{ category.label }}</span> <span class="tally-count">{{ count }}</span></li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-</section>
-{% endif %}
+</header>
 
 {% if analysis.warnings %}
 <div class="alert alert-warning screen-only" role="status">
@@ -75,85 +37,107 @@
 </div>
 {% endif %}
 
+{% if total %}
+<section class="brief screen-only" aria-labelledby="brief-title">
+  <h2 id="brief-title">What you're agreeing to</h2>
+  {% if brief %}
+  <ul class="brief-list">
+    {% for category, clauses in brief %}
+    <li>
+      {{ tier_badge(category.tier, tier_labels) }}
+      <div>
+        <p class="brief-label">{{ category.label }}</p>
+        <p class="brief-desc">{{ category.description }}</p>
+        <p class="brief-refs">In {% for c in clauses %}<a href="#clause-{{ c.index }}" data-goto="{{ c.index }}">{{ ref(c) }}</a>{{ ", " if not loop.last }}{% endfor %}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="brief-empty">No watched phrases were found. That doesn't make the agreement safe, so read it below.</p>
+  {% endif %}
+</section>
+
 <details class="limits screen-only">
   <summary>How to read these results</summary>
   <ul>
-    <li>Risk tiers come from keyword rules. A tier shows which topics a clause touches and how closely it is worth reading. It does not say whether a clause is unfair, unusual or enforceable, and nothing here is legal advice.</li>
-    <li>The rules can miss terms worded differently and can flag harmless mentions; "Why flagged" shows the exact phrases matched. "No flags" means no watched phrase was found, not that a clause is safe.</li>
-    <li>Offsets and the document text refer to the text extracted from the file after clean-up: page headers, footers and page numbers are removed and words hyphenated across lines are rejoined. It is not the PDF's page layout.</li>
-    <li>Section numbers can be missing when a PDF's font hides them. Such clauses show "§ —".</li>
+    <li>Tiers come from keyword rules. A tier shows which topics a clause touches and how closely it is worth reading. It does not say whether a clause is unfair, unusual or enforceable, and nothing here is legal advice.</li>
+    <li>The rules can miss terms worded differently and can flag harmless mentions. Each note in the margin shows the exact phrases matched. "No flags" means no watched phrase was found, not that a clause is safe.</li>
+    <li>The document shown is the text extracted from the file after clean-up: page headers, footers and page numbers are removed and words hyphenated across lines are rejoined. It is not the PDF's page layout.</li>
+    <li>Section numbers can be missing when a PDF's font hides them. Such clauses are called "Clause" plus their position.</li>
     <li>A paragraph whose last line reaches the page margin can merge with the next one. Clauses over {{ long_clause_chars }} characters are marked "long".</li>
-    <li>A heading applies to every clause after it until the next heading, so a document title or a "Last updated" line can appear as the heading of many clauses.</li>
     <li>Numbered lists inside a clause, such as "1) … 2) …", may be split into separate clauses. Scanned PDFs have no text to extract (no OCR yet), and two-column layouts have not been tested.</li>
   </ul>
 </details>
 
-{% if analysis.clauses %}
-<div class="panes screen-only">
-  <section aria-labelledby="clauses-title">
-    <h2 class="pane-title" id="clauses-title">Clauses</h2>
-    <ol class="clause-list" id="clause-list">
-      {% for card in cards %}
-      {% set clause = card.clause %}
-      {% set tier = card.risk.tier %}
-      <li class="clause" data-tier="{{ tier }}" style="--i: {{ loop.index0 }}">
-        <article class="clause-card tier-{{ tier }}" data-clause="{{ clause.index }}">
-          <h3 class="clause-title">
-            <button type="button" class="clause-toggle" data-clause="{{ clause.index }}"
-                    aria-expanded="false" aria-controls="clause-body-{{ clause.index }}">
-              <span class="clause-number{% if not clause.number %} missing{% endif %}">§ {{ clause.number or "—" }}{% if not clause.number %}<span class="visually-hidden"> no number</span>{% endif %}</span>
-              {% if clause.heading %}<span class="clause-heading">{{ clause.heading }}</span>{% endif %}
-              {{ tier_badge(tier, tier_labels) }}
-              <svg class="clause-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
-                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4"/></svg>
-            </button>
-          </h3>
-          <div class="clause-body" id="clause-body-{{ clause.index }}">
-            <p class="clause-text">{% for s in card.segments %}{% if s.hit %}<mark class="hit" title="{{ s.hit }}">{{ s.text }}</mark>{% else %}{{ s.text }}{% endif %}{% endfor %}</p>
-            {% if card.categories %}
-            <div class="why">
-              <p class="label">Why flagged</p>
-              <ul>
-                {% for category, phrases in card.categories %}
-                <li>
-                  <span class="chip tier-{{ category.tier }}">{{ category.label }}</span>
-                  <span class="phrases">{% for p in phrases %}“{{ p }}”{{ ", " if not loop.last }}{% endfor %}</span>
-                </li>
-                {% endfor %}
-              </ul>
-            </div>
-            {% endif %}
-          </div>
-          <p class="clause-offsets">
-            #{{ clause.index }} · chars {{ "{:,}".format(clause.start) }}–{{ "{:,}".format(clause.end) }} · {{ "{:,}".format(clause.text | length) }} characters
-            {% if clause.text | length > long_clause_chars %}<span class="badge">long</span>{% endif %}
-          </p>
-        </article>
-      </li>
-      {% endfor %}
-    </ol>
-  </section>
+<div class="toolbar screen-only" id="toolbar">
+  <div class="filters" role="group" aria-label="Show clauses by tier">
+    <button type="button" class="filter" data-filter="all" aria-pressed="true">All <span class="filter-count">{{ total }}</span></button>
+    {% for t in summary.tiers if t.count %}
+    <button type="button" class="filter tier-{{ t.key }}" data-filter="{{ t.key }}" data-label="{{ tier_labels[t.key][0] }}" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>{{ tier_labels[t.key][0] }} <span class="filter-count">{{ t.count }}</span></button>
+    {% endfor %}
+  </div>
+  {% if summary.flagged and summary.tiers[-1].count %}
+  <button type="button" class="filter fold-toggle" id="fold-toggle" aria-pressed="false">Fold unflagged</button>
+  {% endif %}
+  {% if summary.flagged %}
+  <div class="flagnav" role="group" aria-label="Flagged clauses">
+    <button type="button" class="button button-small" data-step="-1" aria-keyshortcuts="k">Previous<span class="visually-hidden"> flag</span> <kbd aria-hidden="true">K</kbd></button>
+    <span class="flag-count" id="flag-count">{{ summary.flagged }} flagged</span>
+    <button type="button" class="button button-small" data-step="1" aria-keyshortcuts="j">Next<span class="visually-hidden"> flag</span> <kbd aria-hidden="true">J</kbd></button>
+  </div>
+  {% endif %}
+</div>
+<p class="visually-hidden" id="reader-status" role="status" aria-live="polite"></p>
 
-  <section>
-    <div class="pane-head">
-      <h2 class="pane-title" id="text-title">Document</h2>
-      <ul class="legend" aria-label="Highlight colours">
-        <li><span class="swatch tier-high"></span>High</li>
-        <li><span class="swatch tier-medium"></span>Medium</li>
-        <li><span class="swatch tier-low"></span>Low</li>
-        <li><span class="swatch tier-none"></span>No flags</li>
-        <li><span class="swatch selected"></span>Selected</li>
-      </ul>
+<div class="reader screen-only" id="reader">
+  <div class="rail" aria-hidden="true">
+    <div class="rail-track">
+      {% for row in rows %}<i class="tick {{ 'tick-gap' if row.kind == 'gap' else 'tier-' ~ row.card.risk.tier }}" data-row="{{ loop.index0 }}"></i>{% endfor %}
+      <span class="rail-window"></span>
     </div>
-    <div class="doc" tabindex="0" role="region" aria-labelledby="text-title">{% for span in spans %}{% if span.clause is none %}<span class="gap">{{ span.text }}</span>{% else %}<mark id="span-{{ span.clause }}" class="span tier-{{ span.tier }} {{ 'odd' if span.clause % 2 else 'even' }}" data-clause="{{ span.clause }}">{{ span.text }}</mark>{% endif %}{% endfor %}</div>
-  </section>
+  </div>
+
+  <div class="sheet doc">
+    {% for row in rows %}
+    {% if row.kind == "gap" %}
+    <div class="row row-gap" data-row="{{ loop.index0 }}"><p class="gap-text">{{ row.text }}</p></div>
+    {% else %}
+    {% set card = row.card %}{% set clause = card.clause %}{% set tier = card.risk.tier %}
+    <article class="row row-clause tier-{{ tier }}" id="clause-{{ clause.index }}" data-row="{{ loop.index0 }}"
+             data-clause="{{ clause.index }}" data-tier="{{ tier }}" data-ref="{{ ref(clause) }}" tabindex="-1"
+             aria-label="{{ ref(clause) }}, {{ tier_labels[tier][0] }}">
+      <button type="button" class="row-stub" hidden>{{ ref(clause) }}{% if clause.heading %}, {{ clause.heading }}{% endif %}: no flags. Show</button>
+      <p class="row-text"><span class="clause-text" id="span-{{ clause.index }}">{{ segments(row.segments) }}</span></p>
+      <aside class="note">
+        {% if card.categories %}
+        <p class="note-tier">{{ tier_badge(tier, tier_labels, qualifier=true) }}</p>
+        {% for category, phrases in card.categories %}
+        <div class="note-cat">
+          <p class="note-label">{{ category.label }}</p>
+          <p class="note-desc">{{ category.description }}</p>
+          <p class="note-match">Matched {% for p in phrases %}“{{ p }}”{{ ", " if not loop.last }}{% endfor %}</p>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="note-none">No flags</p>
+        {% endif %}
+        <p class="note-meta">{{ ref(clause) }}, characters {{ "{:,}".format(clause.start) }}–{{ "{:,}".format(clause.end) }}{% if clause.text | length > long_clause_chars %} <span class="badge">long</span>{% endif %}</p>
+      </aside>
+    </article>
+    {% endif %}
+    {% endfor %}
+  </div>
 </div>
 {% else %}
-<p class="empty">No clauses were found.</p>
+<div class="empty screen-only">
+  <p>No clauses were found in this document.</p>
+  <a class="button button-primary" href="{{ url_for('index') }}#analyze">Upload a different file</a>
+</div>
 {% endif %}
 
 <section class="export screen-only" aria-labelledby="export-title">
-  <h2 class="export-title" id="export-title">For research</h2>
+  <h2 id="export-title">For research</h2>
   <button type="button" class="link-button" id="download-json" aria-describedby="export-desc">Export data (JSON)</button>
   <p id="export-desc">
     Every clause with its number, heading, character offsets into the extracted text and risk
@@ -162,14 +146,14 @@
   </p>
 </section>
 
-{% if analysis.clauses %}
+{% if total %}
 {# Shown only when printing: a reader-friendly summary of the flagged clauses. #}
 <section class="print-report">
   <header class="print-header">
-    <p class="print-brand">{{ seal() }} LegalLens review summary</p>
+    <p class="print-brand">{{ mark() }} LegalLens review summary</p>
     <h1>{{ analysis.source }}</h1>
     <p class="print-meta">
-      Generated {{ generated_on }} · {{ analysis.clauses | length }} clauses · {{ summary.flagged }} flagged for a closer read
+      Generated {{ generated_on }}. {{ total }} clauses, {{ summary.flagged }} flagged for a closer read.
     </p>
     <ul class="print-counts">
       {% for t in summary.tiers %}
@@ -179,11 +163,11 @@
   </header>
 
   {% for tier, tier_cards in print_groups if tier_cards %}
-  <h2 class="print-tier tier-{{ tier }}">{{ tier_labels[tier][0] }} · {{ tier_labels[tier][1] }} <span>({{ tier_cards | length }})</span></h2>
+  <h2 class="print-tier tier-{{ tier }}">{{ tier_labels[tier][0] }}: {{ tier_labels[tier][1] | lower }} <span>({{ tier_cards | length }})</span></h2>
   {% for card in tier_cards %}
   {% set clause = card.clause %}
   <article class="print-clause tier-{{ tier }}">
-    <h3>§ {{ clause.number or "—" }}{% if clause.heading %} · {{ clause.heading }}{% endif %} <span class="print-index">clause #{{ clause.index }}</span></h3>
+    <h3>{{ ref(clause) }}{% if clause.heading %}, {{ clause.heading }}{% endif %}</h3>
     <p class="print-why">
       {% for category, phrases in card.categories %}<strong>{{ category.label }}</strong>: {% for p in phrases %}“{{ p }}”{{ ", " if not loop.last }}{% endfor %}{{ ". " if not loop.last else "." }}{% endfor %}
     </p>

@@ -1,16 +1,27 @@
-{% macro seal(class="") -%}
-<svg class="seal {{ class }}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-  <circle class="seal-ring" cx="20" cy="20" r="18.5" pathLength="1"/>
-  <circle class="seal-ring seal-ring-inner" cx="20" cy="20" r="15" pathLength="1"/>
-  <text class="seal-glyph" x="20" y="26.6" text-anchor="middle">§</text>
+{% macro mark(class="") -%}
+<svg class="mark {{ class }}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <circle class="mark-ring" cx="17" cy="17" r="12.5"/>
+  <path class="mark-handle" d="M26.2 26.2 35 35"/>
+  <text class="mark-glyph" x="17" y="22.6" text-anchor="middle">§</text>
 </svg>
 {%- endmacro %}
 
-{% macro arrow() -%}
-<svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
-     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8h10m-4-4 4 4-4 4"/></svg>
+{% macro tier_badge(tier, tier_labels, qualifier=false) -%}
+<span class="tier-badge tier-{{ tier }}">{{ tier_labels[tier][0] }}{% if qualifier %}<span class="tier-qualifier">, {{ tier_labels[tier][1] | lower }}</span>{% endif %}</span>
 {%- endmacro %}
 
-{% macro tier_badge(tier, tier_labels, qualifier=false) -%}
-<span class="tier-badge tier-{{ tier }}">{{ tier_labels[tier][0] }}{% if qualifier %}<span class="tier-qualifier"> · {{ tier_labels[tier][1] }}</span>{% endif %}</span>
+{# Document text with matched phrases marked; the title names the category. #}
+{% macro segments(parts) -%}
+{% for s in parts %}{% if s.hit %}<mark class="hit" title="{{ s.hit }}">{{ s.text | doc_breaks }}</mark>{% else %}{{ s.text | doc_breaks }}{% endif %}{% endfor %}
+{%- endmacro %}
+
+{# The homepage sheet: the sample set as fine print. Rendered twice, once under the lens. #}
+{% macro fine_print(rows, tier_labels) -%}
+{% for row in rows %}
+{% if row.kind == "gap" %}<p class="fp-gap">{{ row.text }}</p>
+{% else %}{% set card = row.card %}<p class="fp-clause tier-{{ card.risk.tier }}" data-clause="{{ card.clause.index }}"
+   data-tier="{{ card.risk.tier }}" data-tier-label="{{ tier_labels[card.risk.tier][0] }}"
+   data-note="{% for category, phrases in card.categories %}{{ category.label }}. {{ category.description }}{{ ' ' if not loop.last }}{% endfor %}">{{ segments(row.segments) }}</p>
+{% endif %}
+{% endfor %}
 {%- endmacro %}

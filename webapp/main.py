@@ -11,6 +11,7 @@ written to disk or kept, and logs record sizes and counts, never content.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import Counter
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup, escape
 from starlette.formparsers import MultiPartParser
 
 from legallens import Assessment, Clause, assess, load_bytes, normalize_text, segment
@@ -49,6 +51,21 @@ logger = logging.getLogger("legallens.webapp")
 app = FastAPI(title="LegalLens")
 app.mount("/static", StaticFiles(directory=_HERE / "static"), name="static")
 templates = Jinja2Templates(directory=_HERE / "templates")
+
+# A line break that is structure, not wrapping: before a blank line or a sub-item like "(a)" or "•".
+_HARD_BREAK_RE = re.compile(r"\n(?=\n|\s*(?:\(?[a-z0-9]{1,4}\)|[•·*\-]\s))")
+
+
+def _doc_breaks(text: str) -> Markup:
+    """Escape document text and mark its structural line breaks with <br>.
+
+    Wrapped lines then flow as one paragraph in the browser, while the text itself
+    (newlines included) stays exactly as extracted.
+    """
+    return Markup(_HARD_BREAK_RE.sub("\n<br>", str(escape(text))))
+
+
+templates.env.filters["doc_breaks"] = _doc_breaks
 
 
 class InputError(Exception):
@@ -110,7 +127,8 @@ def analyze_page(
             "print_groups": [(t, [c for c in cards if c["risk"].tier == t]) for t in TIERS],
             "generated_on": f"{date.today():%d %B %Y}".lstrip("0"),
             "summary": _risk_summary(analysis.risks),
-            "spans": _spans(analysis.text, analysis.clauses, analysis.risks),
+            "rows": _doc_rows(analysis.text, cards),
+            "brief": _brief(cards),
             "tier_labels": TIER_LABELS,
             "long_clause_chars": LONG_CLAUSE_CHARS,
             "result": analysis.to_dict(),
@@ -153,11 +171,16 @@ def _analyze(file: UploadFile | None, pasted: str) -> Analysis:
         text = normalize_text(pasted)
         size = len(pasted)
 
+    analysis = _build(source, text)
+    logger.info(
+        "analyzed %s bytes into %d clauses in %.2fs", size, len(analysis.clauses), time.perf_counter() - started
+    )
+    return analysis
+
+
+def _build(source: str, text: str) -> Analysis:
     clauses = segment(text)
     risks = [assess(c.text) for c in clauses]
-    logger.info(
-        "analyzed %s bytes into %d clauses in %.2fs", size, len(clauses), time.perf_counter() - started
-    )
     return Analysis(source, text, clauses, risks, _warnings(text, clauses))
 
 
@@ -206,33 +229,59 @@ def _warnings(text: str, clauses: list[Clause]) -> list[str]:
     return warnings
 
 
-def _spans(text: str, clauses: list[Clause], risks: list[Assessment]) -> list[dict]:
-    """Split the text into clause spans and the gaps between them, in order."""
-    spans = []
-    pos = 0
-    for clause in sorted(clauses, key=lambda c: c.start):
-        if clause.start > pos:
-            spans.append({"clause": None, "text": text[pos : clause.start]})
-        spans.append(
-            {"clause": clause.index, "tier": risks[clause.index].tier, "text": text[clause.start : clause.end]}
-        )
-        pos = clause.end
+def _segments(text: str, evidence: list) -> list[dict]:
+    """Split text around its evidence spans, labelling each matched phrase with its category."""
+    segments, pos = [], 0
+    for e in evidence:
+        if e.start > pos:
+            segments.append({"text": text[pos : e.start], "hit": None})
+        category = CATEGORY_BY_KEY[e.category]
+        segments.append({"text": text[e.start : e.end], "hit": category.label, "tier": category.tier})
+        pos = e.end
     if pos < len(text):
-        spans.append({"clause": None, "text": text[pos:]})
-    return spans
+        segments.append({"text": text[pos:], "hit": None})
+    return segments
+
+
+def _doc_rows(text: str, cards: list[dict]) -> list[dict]:
+    """The document in order: clause rows (exact spans, evidence marked) and the text between them.
+
+    Evidence is found again on the span itself so its offsets fit the document text; line
+    breaks become spaces so lengths match, and only the clause's own categories are kept,
+    so a row never shows a flag its clause doesn't have.
+    """
+    rows, pos = [], 0
+
+    def gap(chunk: str) -> None:
+        if chunk.strip():
+            rows.append({"kind": "gap", "text": chunk.strip()})
+
+    for card in sorted(cards, key=lambda c: c["clause"].start):
+        clause, risk = card["clause"], card["risk"]
+        gap(text[pos : clause.start])
+        span = text[clause.start : clause.end]
+        keep = set(risk.categories)
+        evidence = [e for e in assess(span.replace("\n", " ")).evidence if e.category in keep]
+        rows.append({"kind": "clause", "card": card, "segments": _segments(span, evidence)})
+        pos = clause.end
+    gap(text[pos:])
+    return rows
+
+
+def _brief(cards: list[dict]) -> list[tuple]:
+    """Each flagged category, most severe first, with the clauses that mention it."""
+    found: dict[str, tuple] = {}
+    for card in cards:
+        for category, _ in card["categories"]:
+            found.setdefault(category.key, (category, []))[1].append(card["clause"])
+    return [found[c.key] for c in CATEGORIES if c.key in found]
 
 
 def _cards(analysis: Analysis) -> list[dict]:
     """Per-clause display data: the clause, its risk, and its text split around evidence."""
     cards = []
     for clause, risk in zip(analysis.clauses, analysis.risks):
-        segments, pos = [], 0
-        for e in risk.evidence:
-            if e.start > pos:
-                segments.append({"text": clause.text[pos : e.start], "hit": None})
-            segments.append({"text": e.text, "hit": CATEGORY_BY_KEY[e.category].label})
-            pos = e.end
-        segments.append({"text": clause.text[pos:], "hit": None})
+        segments = _segments(clause.text, risk.evidence)
         phrases = {}
         for e in risk.evidence:  # first few distinct phrases per category, for "Why flagged"
             seen = phrases.setdefault(e.category, [])
@@ -269,14 +318,33 @@ def _limits() -> dict:
     }
 
 
+def _sample_view() -> dict:
+    """The bundled sample, analyzed once: the homepage lens and worked example read it."""
+    cards = _cards(_build("Sample agreement", normalize_text(SAMPLE_TEXT)))
+    rows = _doc_rows(normalize_text(SAMPLE_TEXT), cards)
+    # The worked example: the first numbered clause with more than one matched phrase.
+    example = next(
+        (
+            r for r in rows
+            if r["kind"] == "clause" and r["card"]["clause"].number and sum(bool(s["hit"]) for s in r["segments"]) > 1
+        ),
+        None,
+    )
+    return {"rows": rows, "example": example}
+
+
 def _index_context() -> dict:
     return {
         **_limits(),
+        "sample": SAMPLE_VIEW,
         "sample_text": SAMPLE_TEXT,
         "tier_labels": TIER_LABELS,
         "categories_by_tier": [(t, [c for c in CATEGORIES if c.tier == t]) for t in TIERS],
         "category_count": len(CATEGORIES),
     }
+
+
+SAMPLE_VIEW = _sample_view()
 
 
 def _error(request: Request, message: str, status_code: int) -> Response:

@@ -1,113 +1,129 @@
 {% extends "base.html" %}
-{% from "macros.html" import seal, arrow, tier_badge %}
+{% from "macros.html" import fine_print, segments, tier_badge %}
 {% block content %}
 {% if error %}
-<div class="alert alert-error" role="alert"><strong>Couldn't analyze this file.</strong> {{ error }}</div>
+<div class="alert alert-error" role="alert"><strong>This file couldn't be reviewed.</strong> {{ error }}</div>
 {% endif %}
 
-<section class="hero">
+{# The landing page's backdrop: the sample's fine print drifting up. Each risky phrase
+   takes its highlight as it crosses the hero's scan line (app.js). Decoration only. #}
+<div class="scanfield" aria-hidden="true"><div class="scan-text"><p class="scan-copy">
+{%- for row in sample.rows -%}
+{%- if row.kind == "gap" %}{{ row.text }} {% else -%}
+{%- for s in row.segments %}{% if s.hit %}<mark class="scan-hit {{ 'risk' if s.tier == 'high' else 'review' }}">{{ s.text }}</mark>{% else %}{{ s.text }}{% endif %}{% endfor %} {% endif -%}
+{%- endfor -%}
+</p></div></div>
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="scanline" aria-hidden="true"><span>Scanning</span></div>
   <div class="hero-copy">
-    <p class="eyebrow">Agreement review, clause by clause</p>
-    <h1 class="display">Know what you're agreeing to.</h1>
+    <h1 class="display" id="hero-title">Know what you're agreeing to.</h1>
     <p class="lead">
-      LegalLens reads a terms of service, cardholder agreement or similar document, splits it
-      into its clauses, and flags the ones that deserve a closer read: arbitration, automatic
-      renewal, data sharing, one-sided changes and more.
+      LegalLens reads a terms of service, cardholder agreement or similar document, splits it into
+      clauses, and marks the ones worth a closer read, with the exact words behind each flag.
     </p>
     <div class="hero-actions">
-      <a class="button button-primary" href="#analyze">Analyze a document {{ arrow() }}</a>
+      <a class="button button-primary" href="#analyze">Upload an agreement</a>
       <form class="js-analyze-form" action="{{ url_for('analyze_page') }}" method="post" enctype="multipart/form-data">
         <textarea name="text" hidden>{{ sample_text }}</textarea>
-        <button type="submit" class="button">Try the sample agreement</button>
+        <button type="submit" class="button">Review the sample agreement</button>
       </form>
     </div>
-    <p class="fine-print">Flags come from keyword rules, not legal judgement. Documents are processed in memory and never stored.</p>
+    <p class="hero-note">Flags come from keyword rules, not legal judgement. Documents are processed in memory and never stored.</p>
   </div>
 
-  <div class="hero-visual" aria-hidden="true">
-    <div class="mini-doc">
-      <div class="mini-head">
-        <span class="mini-title">Terms of Service</span>
-        <span class="mini-meta">Reviewing…</span>
+  <div class="stage">
+    <div class="loupe" id="loupe" tabindex="0" role="group"
+         aria-label="Sample agreement under a lens. Arrow keys move the lens." aria-describedby="lens-tag">
+      <div class="sheet fine-print" aria-hidden="true">{{ fine_print(sample.rows, tier_labels) }}</div>
+      <div class="lens" aria-hidden="true">
+        <div class="lens-view"><div class="sheet fine-print" >{{ fine_print(sample.rows, tier_labels) }}</div></div>
       </div>
-      {% set mini = [
-        ("2.1", "high", "Auto-renewal", ["94%", "88%", "52%"]),
-        ("2.2", "medium", "Fees", ["90%", "70%"]),
-        ("3", "none", "", ["86%", "93%", "40%"]),
-        ("4", "high", "Data sharing", ["92%", "78%"]),
-        ("5", "high", "Arbitration", ["88%", "95%", "64%"]),
-        ("6", "low", "Agreement by use", ["80%", "46%"]),
-      ] %}
-      {% for number, tier, tag, widths in mini %}
-      <div class="mini-clause tier-{{ tier }}" style="--d: {{ loop.index0 }}">
-        <span class="mini-num">§ {{ number }}</span>
-        <span class="mini-lines">{% for w in widths %}<i style="width: {{ w }}"></i>{% endfor %}</span>
-        {% if tag %}<span class="mini-tag tier-{{ tier }}">{{ tier_labels[tier][0] }} · {{ tag }}</span>{% endif %}
-      </div>
-      {% endfor %}
-      <div class="mini-reader"></div>
     </div>
-    <div class="mini-summary">
-      {{ seal() }}
-      <span><strong>4 of 6</strong> clauses flagged</span>
+    <div class="lens-side">
+      <p class="lens-tag" id="lens-tag" aria-live="polite">
+        <span class="lens-tag-tier"></span>
+        <span class="lens-tag-note">The highlighted phrases are what LegalLens flags in this sample.</span>
+      </p>
+      <div class="lens-controls">
+        <button type="button" class="button button-small" data-lens-step="-1">Previous flag</button>
+        <button type="button" class="button button-small" data-lens-step="1">Next flag</button>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="steps" id="how" aria-labelledby="how-title" data-reveal>
-  <h2 class="section-title" id="how-title">How it works</h2>
-  <ol class="step-list">
+{% if sample.example %}
+{% set ex = sample.example %}
+{% set ex_clause = ex.card.clause %}
+<section class="how" id="how" aria-labelledby="how-title">
+  <h2 id="how-title">How it works</h2>
+  <p class="section-intro">One clause from the sample agreement, from raw text to flag.</p>
+  <ol class="how-steps">
     <li>
-      <span class="step-num">§ 1</span>
-      <h3>Upload</h3>
-      <p>Drop in a PDF with selectable text or a .txt file, or paste the text. It stays in memory and is discarded once your results are sent.</p>
+      <span class="how-num" aria-hidden="true">1</span>
+      <h3>Read the text</h3>
+      <p>Text is taken from your PDF or file and cleaned up: page numbers, running headers and words split across lines are fixed.</p>
+      <div class="how-sample how-raw">{{ ex.segments | map(attribute="text") | join }}</div>
     </li>
     <li>
-      <span class="step-num">§ 2</span>
-      <h3>Segment</h3>
-      <p>Numbering, headings and labelled paragraphs split the document into clauses, each tied to its exact place in the extracted text.</p>
+      <span class="how-num" aria-hidden="true">2</span>
+      <h3>Find the clauses</h3>
+      <p>Numbering, headings and labelled paragraphs mark where each clause starts and ends.</p>
+      <div class="how-sample">
+        <p class="how-head">§ {{ ex_clause.number }}{% if ex_clause.heading %} <span>{{ ex_clause.heading }}</span>{% endif %}</p>
+        <p>{{ ex_clause.text }}</p>
+      </div>
     </li>
     <li>
-      <span class="step-num">§ 3</span>
-      <h3>Flag</h3>
-      <p>Each clause is checked against watched terms in {{ category_count }} categories and given a tier, with the matching phrases shown as evidence.</p>
+      <span class="how-num" aria-hidden="true">3</span>
+      <h3>Flag what matters</h3>
+      <p>Each clause is checked against watched phrases in {{ category_count }} categories. The words that matched are the evidence.</p>
+      <div class="how-sample how-flagged tier-{{ ex.card.risk.tier }}">
+        <p>{{ segments(ex.card.segments) }}</p>
+        <p class="how-note">{{ tier_badge(ex.card.risk.tier, tier_labels) }}
+          {% for category, phrases in ex.card.categories %}{{ category.label }}{{ ", " if not loop.last }}{% endfor %}</p>
+      </div>
     </li>
   </ol>
 </section>
+{% endif %}
 
-<section class="flags" id="flags" aria-labelledby="flags-title" data-reveal>
-  <h2 class="section-title" id="flags-title">What LegalLens flags</h2>
+<section class="flags" id="flags" aria-labelledby="flags-title">
+  <h2 id="flags-title">What LegalLens flags</h2>
   <p class="section-intro">
-    Each category is a set of watched phrases. A clause takes the tier of the most serious
-    category it matches. "No flags" means no watched phrase was found, not that a clause is
-    harmless.
+    Each category is a set of watched phrases. A clause takes the tier of the most serious category
+    it matches. "No flags" means no watched phrase was found, not that a clause is harmless.
   </p>
-  <table class="ledger">
-    <caption class="visually-hidden">Risk categories and their tiers</caption>
-    <thead>
-      <tr><th scope="col">Tier</th><th scope="col">Category</th><th scope="col">What it means</th></tr>
-    </thead>
-    <tbody>
-      {% for tier, categories in categories_by_tier %}
-      {% for category in categories %}
-      <tr class="tier-{{ tier }}">
-        {% if loop.first %}<td class="ledger-tier" rowspan="{{ categories | length }}">{{ tier_badge(tier, tier_labels, qualifier=true) }}</td>{% endif %}
-        <th scope="row">{{ category.label }}</th>
-        <td>{{ category.description }}</td>
-      </tr>
-      {% endfor %}
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-frame">
+    <table class="ledger">
+      <caption class="visually-hidden">Categories LegalLens flags, with their tiers</caption>
+      <thead>
+        <tr><th scope="col">Category</th><th scope="col">What it means</th><th scope="col">Tier</th></tr>
+      </thead>
+      <tbody>
+        {% for tier, categories in categories_by_tier %}
+        {% for category in categories %}
+        <tr>
+          <th scope="row">{{ category.label }}</th>
+          <td>{{ category.description }}</td>
+          <td>{{ tier_badge(tier, tier_labels) }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
-<section class="analyze" id="analyze" aria-labelledby="analyze-title" data-reveal>
-  <h2 class="section-title" id="analyze-title">Analyze a document</h2>
+<section class="analyze" id="analyze" aria-labelledby="analyze-title">
+  <h2 id="analyze-title">Upload an agreement</h2>
+  <p class="section-intro">A PDF with selectable text, a .txt or a .md file, up to {{ max_mb }} MB and {{ max_pages }} pages. Or paste the text.</p>
 
   <form class="upload-form js-analyze-form" id="upload-form" action="{{ url_for('analyze_page') }}" method="post" enctype="multipart/form-data">
     <label class="dropzone" id="dropzone">
       <input class="visually-hidden" type="file" name="file" id="file-input" accept="{{ accept }}"
-             aria-label="Choose a document to upload" aria-describedby="file-hint">
+             aria-describedby="file-hint">
       <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
@@ -115,49 +131,42 @@
         <path d="M12 17v-6"/>
         <path d="m9.5 13.5 2.5-2.5 2.5 2.5"/>
       </svg>
-      <span class="dropzone-prompt">
-        <span class="dropzone-idle">Drop a document here or <span class="dropzone-cta">choose a file</span></span>
-        <span class="dropzone-file">
-          <span class="dropzone-filename" id="file-name"></span>
-          <span class="dropzone-change">Change file</span>
-        </span>
+      <span class="dropzone-idle">Drop a file here or <span class="dropzone-cta">choose a file</span></span>
+      <span class="dropzone-file">
+        <span class="dropzone-filename" id="file-name"></span>
+        <span class="dropzone-cta">Choose a different file</span>
       </span>
-      <span class="hint" id="file-hint">PDF with selectable text, .txt or .md. Up to {{ max_mb }} MB and {{ max_pages }} pages.</span>
+      <span class="hint" id="file-hint">PDF, .txt or .md. Scanned PDFs have no text to read.</span>
     </label>
     <p class="visually-hidden" id="file-status" role="status" aria-live="polite"></p>
 
-    <div class="divider" aria-hidden="true">or</div>
-
     <label class="field">
-      <span class="field-label">Paste text</span>
-      <textarea name="text" rows="8" placeholder="Paste the agreement text here"></textarea>
+      <span class="field-label">Or paste the agreement text</span>
+      <textarea name="text" rows="8"></textarea>
     </label>
 
-    <button type="submit" class="button button-primary" id="submit-button">Review clauses {{ arrow() }}</button>
+    <div class="form-actions">
+      <button type="submit" class="button button-primary" id="submit-button">Review this agreement</button>
+    </div>
   </form>
 
   <div class="loading" id="loading" hidden>
-    <p class="loading-title">{{ seal("seal-spin") }} Reviewing your document…</p>
-    <div class="loading-grid" aria-hidden="true">
-      <div>
-        {% for width in ["92%", "78%", "86%"] %}
-        <div class="skeleton-card">
-          <div class="skeleton-bar title"></div>
-          <div class="skeleton-bar" style="width: {{ width }}"></div>
-          <div class="skeleton-bar" style="width: 64%"></div>
+    <p class="loading-title" role="status">Reviewing your document…</p>
+    <div class="skeleton" aria-hidden="true">
+      <div class="skeleton-head"><i style="width: 40%"></i><i style="width: 64%"></i></div>
+      <div class="skeleton-sheet">
+        {% for widths in [["94%", "88%", "52%"], ["90%", "70%"], ["86%", "93%", "40%"], ["92%", "78%"]] %}
+        <div class="skeleton-row">
+          <div>{% for w in widths %}<i style="width: {{ w }}"></i>{% endfor %}</div>
+          <div><i style="width: 60%"></i><i style="width: 85%"></i></div>
         </div>
-        {% endfor %}
-      </div>
-      <div class="skeleton-doc">
-        {% for width in ["96%", "88%", "93%", "71%", "95%", "84%", "90%", "58%", "91%", "76%"] %}
-        <div class="skeleton-bar" style="width: {{ width }}"></div>
         {% endfor %}
       </div>
     </div>
   </div>
 </section>
 
-<section class="notes" data-reveal>
+<section class="notes" aria-label="About your document and the flags">
   <div>
     <h2>What happens to your document</h2>
     <p>

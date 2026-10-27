@@ -1,33 +1,42 @@
-{% from "macros.html" import seal %}<!doctype html>
+{% from "macros.html" import mark %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}LegalLens{% endblock %}</title>
-  <script>document.documentElement.classList.add("js");</script>
-  <link rel="preload" href="{{ url_for('static', path='fonts/libre-caslon-display-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <script>
+    // Before first paint: mark JS, and apply a theme the visitor chose earlier (otherwise follow the system).
+    document.documentElement.classList.add("js");
+    try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <link rel="preload" href="{{ url_for('static', path='fonts/libre-caslon-text-400-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ url_for('static', path='fonts/source-sans-3-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}" type="image/svg+xml">
-  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=10">
 </head>
 <body>
   <a class="skip-link" href="#content">Skip to content</a>
   <header class="masthead">
-    <a class="wordmark" href="{{ url_for('index') }}">{{ seal("seal-draw") }}<span>LegalLens</span></a>
-    <span class="tagline">Clause review for legal and consumer agreements</span>
+    <a class="wordmark" href="{{ url_for('index') }}">{{ mark() }}<span>LegalLens</span></a>
     <nav class="site-nav" aria-label="Main">
-      <a href="{{ url_for('index') }}#how">How it works</a>
-      <a href="{{ url_for('index') }}#flags">What it flags</a>
-      <a class="button button-small" href="{{ url_for('index') }}#analyze">Analyze a document</a>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Dark theme" title="Switch to dark theme" hidden>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
+      </button>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-links">Menu</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="{{ url_for('index') }}#how">How it works</a></li>
+        <li><a href="{{ url_for('index') }}#flags">What it flags</a></li>
+      </ul>
+      <a class="button button-primary button-small" href="{{ url_for('index') }}#analyze"><span>Upload<span class="wide-only"> an agreement</span></span></a>
     </nav>
   </header>
   <main id="content" class="{% block main_class %}page{% endblock %}" tabindex="-1">
     {% block content %}{% endblock %}
   </main>
   <footer class="site-footer">
-    <p>LegalLens is a research prototype. Its flags come from keyword rules and are automated assistance, not legal advice.</p>
+    <p>LegalLens is a research prototype. Its flags come from keyword rules and are automated help, not legal advice.</p>
   </footer>
-  <script src="{{ url_for('static', path='app.js') }}"></script>
+  <script src="{{ url_for('static', path='app.js') }}?v=10"></script>
 </body>
 </html>
