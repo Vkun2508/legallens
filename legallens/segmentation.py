@@ -154,6 +154,11 @@ def segment(text: str) -> list[Clause]:
     prev_text = ""
     after_blank = True  # any blank line since the previous text line
     hard_break = True  # a blank line that is a paragraph break, not a page break
+    # Plain headings seen since the last body line. A heading that heads nothing (another
+    # heading follows, or the text ends) is really a short body line: a name, an address,
+    # an email in a contact block. Those lines are kept as a clause instead of being lost.
+    pending: list[_Line] = []
+    pending_heading: str | None = None  # the heading in force before the run
 
     def close() -> None:
         nonlocal draft
@@ -163,6 +168,15 @@ def segment(text: str) -> list[Clause]:
                 Clause(len(clauses), body, draft.number, draft.heading, draft.start, draft.end)
             )
         draft = None
+
+    def flush_orphans(keep_last: bool) -> None:
+        # Before the first clause a run is a title block ("Terms", "Last updated: ..."),
+        # which stays as headings.
+        orphans = pending[:-1] if keep_last else pending[:]
+        if orphans and clauses:
+            body = "\n".join(line.text for line in orphans)
+            clauses.append(Clause(len(clauses), body, None, pending_heading, orphans[0].start, orphans[-1].end))
+        pending.clear()
 
     for i, line in enumerate(lines):
         if not line.text:
@@ -192,6 +206,14 @@ def segment(text: str) -> list[Clause]:
         next_text = lines[i + 1].text if i + 1 < len(lines) else ""
         following = next((l.text for l in lines[i + 1 :] if l.text), "")
         kind, number, body = _classify(line.text, at_boundary, next_text, following, layout)
+
+        if kind == "heading":
+            if not pending:
+                pending_heading = ctx_heading
+            close()
+            pending.append(line)
+        else:
+            flush_orphans(keep_last=True)
 
         if kind == "numbered_heading":
             close()
@@ -227,6 +249,7 @@ def segment(text: str) -> list[Clause]:
         after_blank = hard_break = False
 
     close()
+    flush_orphans(keep_last=False)
     return clauses
 
 

@@ -1,0 +1,4 @@
+# A policy written to meet every app rule: no violations, nothing missing.
+business_type: app
+violations: []
+missing: []

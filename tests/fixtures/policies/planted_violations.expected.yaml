@@ -1,0 +1,25 @@
+# Planted violations (prohibited rules) and the required rules this policy does not satisfy.
+# clause_contains picks the clause by a phrase, so the file survives segmentation changes.
+business_type: app
+violations:
+  - {rule_id: dpdp.consent.invalid, clause_contains: "By using the app"}
+  - {rule_id: dpdp.consent.withdrawal_ease, clause_contains: "signed letter"}
+  - {rule_id: dpdp.basis.legitimate_interest, clause_contains: "legitimate interests"}
+  - {rule_id: dpdp.fiduciary.breach_disclaimer, clause_contains: "not responsible"}
+  - {rule_id: dpdp.fiduciary.indefinite_retention, clause_contains: "indefinitely"}
+  - {rule_id: dpdp.children.tracking_ads, clause_contains: "personalised ads"}
+  - {rule_id: dark.subscription_trap, clause_contains: "only by calling"}
+  - {rule_id: dark.subscription_trap, clause_contains: "free trial"}  # card required for a "free" trial
+  - {rule_id: dark.saas_billing, clause_contains: "free trial"}
+missing:
+  - dpdp.notice.withdrawal_means
+  - dpdp.notice.board_complaint
+  - dpdp.notice.language
+  - dpdp.consent.stop_after_withdrawal
+  - dpdp.fiduciary.accuracy
+  - dpdp.fiduciary.breach_intimation
+  - dpdp.fiduciary.erasure
+  - dpdp.children.parental_consent  # "under 13" is a US threshold; DPDP children are under 18
+  - dpdp.rights.access
+  - dpdp.rights.nomination
+  - dpdp.cross_border.disclosure

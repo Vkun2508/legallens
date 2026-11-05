@@ -1,6 +1,11 @@
 # Core segmentation uses only the standard library.
 pypdf>=4.0              # optional: reading text-based PDFs
 
+# Compliance engine (legallens/compliance): rulebook YAML and the AI checker.
+# Without ANTHROPIC_API_KEY, audits run in keyword fallback mode.
+pyyaml>=6.0
+anthropic>=2.4,<3
+
 # Web demo (webapp/): run with `uvicorn webapp.main:app`
 fastapi>=0.115
 uvicorn>=0.30

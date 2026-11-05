@@ -1,0 +1,301 @@
+# CCPA Guidelines for Prevention and Regulation of Dark Patterns, 2023 (Annexure 1, 13 patterns).
+#
+# Five patterns can show up in the wording of terms or a policy (scope: text) and are checked.
+# The other eight live in the interface itself (scope: ui): they are listed in every report as a
+# manual checklist and are not scored, because a document cannot show them.
+# The quotes below come from a reproduction of the notification, not the Gazette PDF itself, so
+# they stay verified: false until checked against the official copy.
+law: dark_patterns
+name: Guidelines for Prevention and Regulation of Dark Patterns, 2023 (CCPA)
+short_name: Dark Patterns Guidelines
+summary: >-
+  Subscription traps, silent renewals, drip pricing, forced action and bait and switch in your
+  terms, plus a checklist of the eight patterns that only show in an app's screens.
+sources:
+  guidelines:
+    title: CCPA Guidelines for Prevention and Regulation of Dark Patterns, 2023 (30 November 2023)
+    url: https://taxguru.in/?p=884818
+    in_force_from: "2023-11-30"
+    in_force_note: Secondary reproduction of the notification; check against the official Gazette copy.
+
+rules:
+  - id: dark.subscription_trap
+    section: Annex 1, item 5
+    title: Subscription trap
+    type: prohibited
+    severity: major
+    basis: guidelines
+    what_it_means: >-
+      Making a paid subscription impossible or hard to cancel, hiding the cancel option, requiring
+      payment details for a "free" trial, or giving confusing cancellation instructions.
+    how_to_fix: >-
+      You can cancel your subscription at any time in Settings > Subscription with one tap, in the
+      same way you subscribed.
+    check_hints:
+      patterns:
+        - '\bcancel\w*\b[^.]{0,120}\b(?:only (?:by|via|through) (?:phone|calling|post|letter|visiting)|in writing|(?:\d+|thirty|sixty|ninety) days.? (?:prior |advance )?notice|cannot be cancell?ed|non-cancell?able)'
+        - '\b(?:cannot be cancell?ed|non-cancell?able|non-refundable and non-cancell?able)\b'
+        - '\bfree trial\b[^.]{0,120}\b(?:card|payment details|auto-?debit|mandate)\b'
+    examples:
+      match:
+        - Subscriptions can be cancelled only by calling our helpline during business hours with 30 days' notice.
+      no_match:
+        - You can cancel your subscription anytime in Settings with one tap.
+    source:
+      doc: guidelines
+      quote: >-
+        making cancellation of a paid subscription impossible or a complex and lengthy process; or
+        hiding the cancellation option for a subscription; or forcing a user to provide payment
+        details or authorization for auto debits for availing a free subscription
+      verified: false
+
+  - id: dark.saas_billing
+    section: Annex 1, item 12
+    title: SaaS billing (silent recurring charges)
+    type: prohibited
+    severity: major
+    basis: guidelines
+    what_it_means: >-
+      Charging users on a recurring basis as quietly as possible, such as converting a free trial
+      to paid or auto-renewing without telling them first.
+    how_to_fix: >-
+      Before your free trial ends or your plan renews, we email you a reminder at least 7 days in
+      advance with the amount and a one-tap cancel link.
+    check_hints:
+      patterns:
+        - '\b(?:auto-?renew\w*|automatically (?:renew|charge|convert|bill)\w*)\b[^.]{0,120}\b(?:without (?:further |prior |any )?(?:notice|reminder|notification)|unless you cancel)'
+        - '\bfree trial\b[^.]{0,120}\b(?:automatically|auto)\w*\b[^.]{0,60}\b(?:paid|charge|bill)\w*'
+      unless:
+        - '\b(?:remind|notify|email you|inform you)\w*\b[^.]{0,60}\bbefore\b'
+    examples:
+      match:
+        - After the free trial, your plan automatically converts to a paid plan and your card is charged without further notice.
+      no_match:
+        - Before any renewal, we email you a reminder at least 7 days in advance, and you can cancel in one tap.
+    source:
+      doc: guidelines
+      quote: >-
+        "Saas billing" refers to the process of generating and collecting payments from consumers
+        on a recurring basis
+      verified: false
+
+  - id: dark.drip_pricing
+    section: Annex 1, item 8
+    title: Drip pricing
+    type: prohibited
+    severity: major
+    basis: guidelines
+    what_it_means: >-
+      Not revealing parts of the price upfront, so extra fees appear only at checkout.
+    how_to_fix: >-
+      The price shown on each product page is the total you pay, including taxes, delivery and any
+      platform or convenience fees.
+    check_hints:
+      patterns:
+        - '\b(?:additional|extra|other|convenience|platform|handling|service) (?:fees?|charges?)\b[^.]{0,120}\b(?:at checkout|at the time of (?:payment|checkout)|may apply|will be added|not included)'
+    examples:
+      match:
+        - Convenience fees and other charges may apply and will be shown at checkout.
+      no_match:
+        - All prices include taxes and delivery charges; the price you see is the price you pay.
+    source:
+      doc: guidelines
+      quote: >-
+        elements of prices are not revealed upfront or are revealed surreptitiously within the user
+        experience
+      verified: false
+
+  - id: dark.forced_action
+    section: Annex 1, item 4
+    title: Forced action
+    type: prohibited
+    severity: major
+    basis: guidelines
+    what_it_means: >-
+      Forcing users to buy something extra, or sign up for an unrelated service, to get what they
+      came for.
+    how_to_fix: >-
+      Subscribing to our newsletter or any other service is optional and never required to buy or
+      use our products.
+    check_hints:
+      patterns:
+        - '\b(?:to (?:use|access|purchase|buy|complete)|in order to)\b[^.]{0,80}\b(?:you must|must also|are required to|required to)\b[^.]{0,80}\b(?:subscribe|sign up|download|share (?:your )?contacts|consent to (?:marketing|promotional))'
+        - '\b(?:must|required to)\b[^.]{0,40}\b(?:subscribe to|sign up for|consent to)\b[^.]{0,40}\b(?:newsletter|marketing|promotional|membership)'
+    examples:
+      match:
+        - To complete your purchase, you must also subscribe to our marketing newsletter.
+      no_match:
+        - You can subscribe to our newsletter if you wish.
+    source:
+      doc: guidelines
+      quote: >-
+        forcing a user into taking an action that would require the user to buy any additional
+        good(s) or subscribe or sign up for an unrelated service
+      verified: false
+
+  - id: dark.bait_and_switch
+    section: Annex 1, item 7
+    title: Bait and switch
+    type: prohibited
+    severity: major
+    basis: guidelines
+    what_it_means: >-
+      Advertising one outcome but delivering another, such as swapping an ordered product for a
+      "similar" one without asking.
+    how_to_fix: >-
+      If an item you ordered is unavailable, we will ask before offering a substitute; if you do
+      not agree, we cancel that item and refund you in full.
+    check_hints:
+      patterns:
+        - '\b(?:substitut|replac)\w*\b[^.]{0,80}\b(?:similar|equivalent|alternative|another)\b[^.]{0,60}\b(?:product|item|plan|service)s?\b'
+      unless:
+        - '\b(?:with your (?:consent|approval|permission)|only if you (?:agree|approve)|ask (?:you )?(?:first|before))\b'
+    examples:
+      match:
+        - If an item is unavailable, we may substitute it with a similar product without asking you.
+      no_match:
+        - If an item is unavailable, we will cancel it and refund you in full.
+    source:
+      doc: guidelines
+      quote: >-
+        the practice of advertising a particular outcome based on the user's action but deceptively
+        serving an alternate outcome
+      verified: false
+
+  # --- Interface-only patterns: manual checklist, not scored -------------------------------
+  - id: dark.false_urgency
+    section: Annex 1, item 1
+    title: False urgency
+    type: prohibited
+    severity: major
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Falsely claiming scarcity or urgency ("only 2 left", fake countdown timers) to rush a purchase.
+    how_to_fix: Show stock and deadlines only when they are true and current.
+    source:
+      doc: guidelines
+      quote: >-
+        falsely stating or implying the sense of urgency or scarcity so as to mislead a user into
+        making an immediate purchase
+      verified: false
+
+  - id: dark.basket_sneaking
+    section: Annex 1, item 2
+    title: Basket sneaking
+    type: prohibited
+    severity: major
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Adding items, services or donations to the cart at checkout without the user's consent.
+    how_to_fix: Never add anything to the cart that the user did not choose.
+    source:
+      doc: guidelines
+      quote: >-
+        inclusion of additional items such as products, services, payments to charity/donation at
+        the time of checkout from a platform, without the consent of the user
+      verified: false
+
+  - id: dark.confirm_shaming
+    section: Annex 1, item 3
+    title: Confirm shaming
+    type: prohibited
+    severity: minor
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Using guilt or shame to push a choice ("No thanks, I don't care about my safety").
+    how_to_fix: Use neutral wording for every option, such as "No thanks".
+    source:
+      doc: guidelines
+      quote: >-
+        using a phrase, video, audio or any other means to create a sense of fear or shame or
+        ridicule or guilt in the mind of the user
+      verified: false
+
+  - id: dark.interface_interference
+    section: Annex 1, item 6
+    title: Interface interference
+    type: prohibited
+    severity: major
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Designing the interface to highlight some information and hide other relevant information to
+      misdirect the user.
+    how_to_fix: Give equal visual weight to options such as accept and decline.
+    source:
+      doc: guidelines
+      quote: >-
+        a design element that manipulates the user interface in ways that highlights certain
+        specific information; and obscures other relevant information
+      verified: false
+
+  - id: dark.disguised_ads
+    section: Annex 1, item 9
+    title: Disguised advertisement
+    type: prohibited
+    severity: major
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Passing off ads as user content, news articles or reviews.
+    how_to_fix: Label every paid placement clearly as an advertisement.
+    source:
+      doc: guidelines
+      quote: >-
+        posing, masking advertisements as other types of content such as user generated content or
+        new articles or false advertisements
+      verified: false
+
+  - id: dark.nagging
+    section: Annex 1, item 10
+    title: Nagging
+    type: prohibited
+    severity: minor
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Overloading users with repeated requests or interruptions unrelated to what they came to do.
+    how_to_fix: Ask once, remember the answer, and let users turn prompts off.
+    source:
+      doc: guidelines
+      quote: >-
+        users face an overload of requests, information, options, or interruptions; unrelated to the
+        intended purchase of goods or services
+      verified: false
+
+  - id: dark.trick_question
+    section: Annex 1, item 11
+    title: Trick question
+    type: prohibited
+    severity: major
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Confusing wording or double negatives in choices, so users pick something they did not mean.
+    how_to_fix: Phrase every opt-in as a plain positive choice ("Send me offers").
+    source:
+      doc: guidelines
+      quote: >-
+        the deliberate use of confusing or vague language like confusing wording, double negatives,
+        or other similar tricks
+      verified: false
+
+  - id: dark.rogue_malware
+    section: Annex 1, item 13
+    title: Rogue malware
+    type: prohibited
+    severity: critical
+    basis: guidelines
+    scope: ui
+    what_it_means: >-
+      Using ransomware or scareware, such as fake virus warnings, to push a purchase.
+    how_to_fix: Never show fake security warnings or bundle unwanted software.
+    source:
+      doc: guidelines
+      quote: >-
+        using a ransomware or scareware to mislead or trick user into believing there is a virus on
+        their computer
+      verified: false

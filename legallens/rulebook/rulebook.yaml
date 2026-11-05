@@ -1,0 +1,23 @@
+# LegalLens compliance rulebook: the manifest.
+#
+# Every audit report is stamped with `version`. Bump it whenever a rule is added,
+# removed or changes meaning, so an old report can be traced to the rules it used.
+version: "2026.11-draft.2"
+updated: "2026-11-04"
+
+laws:
+  - dpdp.yaml
+  - ecommerce.yaml
+  - dark_patterns.yaml
+
+# Score weights by severity: a rule that passes earns its full weight, an
+# "unclear" rule earns half, and a failed or missing rule earns nothing.
+weights:
+  critical: 10
+  major: 5
+  minor: 2
+
+disclaimer: >-
+  LegalLens gives compliance assistance, not legal advice. It checks the text of a
+  document against a fixed rulebook and can miss issues or flag harmless wording.
+  Have a qualified lawyer review critical findings before relying on them.

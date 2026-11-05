@@ -212,3 +212,31 @@ def test_load_bytes_matches_load_document():
 def test_empty_text():
     assert segment("") == []
     assert segment("\n\n  \n") == []
+
+
+CONTACT_BLOCK = (
+    "Privacy Notice\n\nLast updated: 1 May 2026\n\nComplaints\n\n"
+    "If you have a complaint, contact our officer:\n\n"
+    "Dhanya Bhatt\n\nAcme Private Limited\n\nReg Office: 12 MG Road, Bengaluru 560001\n\n"
+    "DPO\n\nMR. A Kumar\n\nE-mail: dpo@example.in\n"
+)
+
+
+def test_short_lines_that_head_nothing_are_kept_as_text():
+    # Contact blocks are short capitalised lines that look like headings; before this fix a run of
+    # them, or any at the end of the text, vanished from the clauses (and so from every check).
+    clauses = segment(CONTACT_BLOCK)
+    assert [c.text for c in clauses] == [
+        "If you have a complaint, contact our officer:",
+        "Dhanya Bhatt",
+        "Reg Office: 12 MG Road, Bengaluru 560001",
+        "DPO\nMR. A Kumar\nE-mail: dpo@example.in",
+    ]
+    block = clauses[-1]
+    assert CONTACT_BLOCK[block.start : block.end] == "DPO\n\nMR. A Kumar\n\nE-mail: dpo@example.in"
+
+
+def test_title_block_before_the_first_clause_stays_headings():
+    clauses = segment(CONTACT_BLOCK)
+    assert clauses[0].heading == "Complaints"
+    assert not any("Privacy Notice" in c.text or "Last updated" in c.text for c in clauses)

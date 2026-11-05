@@ -1,0 +1,195 @@
+# Consumer Protection (E-Commerce) Rules, 2020.
+# Applies to e-commerce entities; marketplace-only rules say so in applies_to.
+# Quotes were checked against the Gazette text on 2026-11-04 (verified: true).
+law: ecommerce
+name: Consumer Protection (E-Commerce) Rules, 2020
+short_name: E-Commerce Rules
+summary: >-
+  Business and grievance officer details, returns and refunds, seller information,
+  cancellation charges and pre-ticked boxes. Checked for online stores and marketplaces.
+applies_to: ecommerce
+sources:
+  rules:
+    title: Consumer Protection (E-Commerce) Rules, 2020 (G.S.R. 462(E), 23 July 2020)
+    url: https://egazette.gov.in/WriteReadData/2020/220661.pdf
+    in_force_from: "2020-07-23"
+
+rules:
+  - id: ecom.entity_details
+    section: r.4(2)
+    title: Shows the legal name, address and contact details of the business
+    type: required
+    severity: major
+    basis: rules
+    what_it_means: >-
+      Your platform must prominently show your legal name, the address of your headquarters and
+      branches, your website details, and customer care and grievance officer contact details.
+    how_to_fix: >-
+      This platform is operated by [Legal Name] Private Limited, with its registered office at
+      [full address]. Customer care: care@yourcompany.in, +91 XXXXX XXXXX.
+    check_hints:
+      patterns:
+        - '\b(?:Private Limited|Pvt\.? Ltd|LLP|Limited|registered office|headquarter\w*|principal place of business)\b'
+      with:
+        - '\b(?:address|located at|road|street|floor|nagar|India|\d{6})\b'
+    examples:
+      match:
+        - This platform is operated by Example Retail Private Limited, registered office at 12 MG Road, Bengaluru 560001, India.
+      no_match:
+        - We sell great products at great prices.
+    source:
+      doc: rules
+      quote: >-
+        legal name of the e-commerce entity; principal geographic address of its headquarters and
+        all branches; name and details of its website; and contact details like e-mail address,
+        fax, landline and mobile numbers of customer care as well as of grievance officer
+      verified: true
+
+  - id: ecom.grievance_officer
+    section: r.4(4)
+    also_cites: ["r.4(5)"]
+    title: Names a grievance officer with contact details and timelines
+    type: required
+    severity: critical
+    basis: rules
+    what_it_means: >-
+      You must appoint a grievance officer and display their name, designation and contact
+      details. Complaints must be acknowledged within 48 hours and resolved within one month.
+    how_to_fix: >-
+      Grievance Officer: [Name], [Designation], grievance@yourcompany.in, +91 XXXXX XXXXX. We
+      acknowledge every complaint within 48 hours and resolve it within one month of receipt.
+    check_hints:
+      patterns:
+        - '\bgrievance officer\b'
+      with:
+        - '(?:@|\+?\d[\d\s-]{7,}|\b(?:email|e-mail|phone|designation)\b)'
+    examples:
+      match:
+        - "Grievance Officer: Rahul Mehta, Head of Customer Support, grievance@example.in, +91 80 1234 5678."
+      no_match:
+        - Contact customer support for help.
+    source:
+      doc: rules
+      quote: >-
+        shall appoint a grievance officer for consumer grievance redressal, and shall display the
+        name, contact details, and designation of such officer on its platform
+      verified: true
+
+  - id: ecom.returns_refunds
+    section: r.5(3)(c)
+    also_cites: ["r.7(1)(a)"]
+    title: Explains the return, refund, exchange and cancellation policy
+    type: required
+    severity: major
+    basis: rules
+    what_it_means: >-
+      You must clearly display information on returns, refunds, exchanges, warranty, delivery,
+      payment modes and grievance redressal, so buyers can decide before purchase.
+    how_to_fix: >-
+      You can return most items within [7] days of delivery. Refunds are paid to your original
+      payment method within [5] working days of the return being accepted. Items that cannot be
+      returned are marked on the product page.
+    check_hints:
+      patterns:
+        - '\b(?:return|refund|exchange|cancell?ation)s?\b[^.]{0,120}\b(?:within|days|policy|eligible|request|initiate|processed)\b'
+    examples:
+      match:
+        - You can return most items within 7 days of delivery, and refunds are processed to your original payment method.
+      no_match:
+        - We ship across India.
+    source:
+      doc: rules
+      quote: >-
+        information relating to return, refund, exchange, warranty and guarantee, delivery and
+        shipment, modes of payment, and grievance redressal mechanism
+      verified: true
+
+  - id: ecom.seller_info
+    section: r.5(3)(a)
+    title: Shows seller details on a marketplace
+    type: required
+    severity: major
+    basis: rules
+    applies_to: marketplace
+    what_it_means: >-
+      A marketplace must show details of each seller: business name, address, customer care number
+      and ratings, before purchase.
+    how_to_fix: >-
+      Each product page shows the seller's business name, geographic address, customer care
+      number and rating. After purchase you can ask us for the seller's full contact details.
+    check_hints:
+      patterns:
+        - '\bsellers?\b[^.]{0,120}\b(?:name|address|customer care|contact|rating)'
+        - '\bseller''s\b[^.]{0,120}\b(?:name|address|customer care|contact|rating)'
+    examples:
+      match:
+        - Each product page shows the seller's business name, address, customer care number and rating.
+      no_match:
+        - We are the seller of all products on this website.
+    source:
+      doc: rules
+      quote: >-
+        details about the sellers offering goods and services, including the name of their
+        business, whether registered or not, their geographic address, customer care number, any
+        rating or other aggregated feedback about such seller
+      verified: true
+
+  - id: ecom.one_sided_cancellation_charges
+    section: r.4(8)
+    title: Charges buyers for cancelling without bearing the same charge itself
+    type: prohibited
+    severity: major
+    basis: rules
+    what_it_means: >-
+      You cannot charge buyers for cancelling after they confirm a purchase unless you bear a
+      similar charge when you cancel an order yourself.
+    how_to_fix: >-
+      Either remove the cancellation charge, or add: "If we cancel your order for any reason, we
+      pay you the same charge."
+    check_hints:
+      patterns:
+        - '\bcancell?ation (?:charges?|fees?)\b'
+        - '\b(?:charge|levy|deduct)\w*\b[^.]{0,80}\b(?:if|when) you cancel\b'
+      unless:
+        - '\b(?:we (?:also )?(?:pay|bear)|if we cancel|same (?:charge|fee) (?:applies )?to us)\b'
+    examples:
+      match:
+        - A cancellation fee of 10% of the order value applies if you cancel after confirming your order.
+      no_match:
+        - You can cancel any order before it ships at no charge.
+    source:
+      doc: rules
+      quote: >-
+        No e-commerce entity shall impose cancellation charges on consumers cancelling after
+        confirming purchase unless similar charges are also borne by the e-commerce entity, if they
+        cancel the purchase order unilaterally for any reason.
+      verified: true
+
+  - id: ecom.pre_ticked_consent
+    section: r.4(9)
+    title: Records purchase consent automatically or with pre-ticked boxes
+    type: prohibited
+    severity: major
+    basis: rules
+    what_it_means: >-
+      Consent to buy anything (including add-ons) must be an explicit, affirmative action. You
+      cannot record it automatically or with pre-ticked checkboxes.
+    how_to_fix: >-
+      Add-ons such as insurance or gift wrapping are never selected for you; you add them only by
+      ticking an unticked box.
+    check_hints:
+      patterns:
+        - '\bpre-?(?:ticked|checked|selected)\b'
+        - '\b(?:automatically|by default)\b[^.]{0,60}\b(?:add|opt|enrol|subscrib|record|consent)\w*'
+        - '\b(?:add|opt|enrol|subscrib|record)\w*\b[^.]{0,60}\b(?:automatically|by default)\b'
+    examples:
+      match:
+        - Gift wrapping is added to your order by default and the insurance box is pre-ticked.
+      no_match:
+        - You choose every add-on yourself; nothing is selected for you.
+    source:
+      doc: rules
+      quote: >-
+        no such entity shall record such consent automatically, including in the form of
+        pre-ticked checkboxes
+      verified: true

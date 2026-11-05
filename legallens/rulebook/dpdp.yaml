@@ -1,0 +1,728 @@
+# Digital Personal Data Protection Act, 2023 and DPDP Rules, 2025.
+#
+# basis:
+#   statute / rules - the law says what the notice or policy must contain, or forbids the practice.
+#   best_practice   - the law imposes a duty; stating it in the policy is recommended evidence
+#                     that the duty is met, not a legal requirement on the text itself.
+# Quotes were checked against the Gazette text on 2026-11-04 (verified: true).
+law: dpdp
+name: Digital Personal Data Protection Act, 2023 and DPDP Rules, 2025
+short_name: DPDP Act
+summary: >-
+  What the notice must say, valid consent and easy withdrawal, security and breach duties,
+  retention, children's data, user rights and grievances.
+sources:
+  act:
+    title: Digital Personal Data Protection Act, 2023 (No. 22 of 2023)
+    url: https://www.indiacode.nic.in/bitstream/123456789/22037/2/a2023-22.pdf
+    in_force_from: "2027-05-13"
+    in_force_note: >-
+      Obligations on Data Fiduciaries apply in phases; the duties checked here line up with
+      the DPDP Rules' 18-month commencement. Confirm against the Act's commencement notification.
+  rules:
+    title: Digital Personal Data Protection Rules, 2025 (G.S.R. 846(E), 13 November 2025)
+    url: https://egazette.gov.in/WriteReadData/2025/267650.pdf
+    in_force_from: "2027-05-13"
+    in_force_note: Rules 3, 5 to 16, 22 and 23 come into force eighteen months after publication (rule 1(4)).
+
+rules:
+  - id: dpdp.notice.data_and_purpose
+    section: s.5(1)(i)
+    also_cites: ["DPDP Rules r.3(b)"]
+    title: Notice lists the personal data collected and why
+    type: required
+    severity: critical
+    basis: statute
+    what_it_means: >-
+      Before asking for consent you must tell people exactly which personal data you collect
+      (an itemised list, not "information about you") and the specific purpose for each item.
+    how_to_fix: >-
+      We collect: (a) your name, email address and mobile number, to create and secure your
+      account; (b) your delivery address, to deliver your orders; (c) your payment status (not
+      your full card number), to confirm payment. We use each item only for the purpose listed
+      next to it.
+    check_hints:
+      patterns:
+        - '\b(?:we|you)\b[^.]{0,60}\b(?:collect|process|gather|obtain|receive|provide|submit)\w*\b[^.]{0,120}\b(?:name|e-?mail|phone|mobile|address|location|device|payment|personal data|personal information)\b'
+      with:
+        - '\b(?:purposes?|in order to|so that we can|to (?:create|provide|process|deliver|improve|personali[sz]e|verify|send|confirm)|we use (?:it|this|them|your)|used (?:to|for))\b'
+    examples:
+      match:
+        - We collect your name, email address and phone number to create your account and deliver your orders.
+        - To create a profile, you may be asked to provide your name, email address and college name.
+      no_match:
+        - We care deeply about your privacy.
+    source:
+      doc: act
+      quote: >-
+        the personal data and the purpose for which the same is proposed to be processed
+      verified: true
+
+  - id: dpdp.notice.withdrawal_means
+    section: s.5(1)(ii)
+    also_cites: ["s.6(4)", "DPDP Rules r.3(c)(i)"]
+    title: Notice explains how to withdraw consent
+    type: required
+    severity: major
+    basis: statute
+    what_it_means: >-
+      The notice must say how people can withdraw their consent: the link, setting or other
+      means they use to do it.
+    how_to_fix: >-
+      You can withdraw your consent at any time from Settings > Privacy in the app, or by
+      writing to privacy@yourcompany.in. Withdrawing is as easy as giving consent.
+    check_hints:
+      patterns:
+        - '\bwithdraw\w*\b[^.]{0,60}\bconsent\b'
+        - '\bconsent\b[^.]{0,60}\bwithdraw\w*'
+      with:
+        - '\b(?:settings?|e-?mail|write to|link|form|dashboard|account|app|click|toggle|button|tap)\b'
+    examples:
+      match:
+        - You can withdraw your consent at any time from Settings > Privacy in the app.
+      no_match:
+        - We may use your data for analytics.
+    source:
+      doc: act
+      quote: >-
+        the manner in which she may exercise her rights under sub-section (4) of section 6 and section 13
+      verified: true
+
+  - id: dpdp.notice.board_complaint
+    section: s.5(1)(iii)
+    also_cites: ["DPDP Rules r.3(c)(iii)"]
+    title: Notice explains how to complain to the Data Protection Board
+    type: required
+    severity: major
+    basis: statute
+    what_it_means: >-
+      The notice must tell people they can complain to the Data Protection Board of India and
+      how to do so, after using your own grievance process.
+    how_to_fix: >-
+      If you are not satisfied with how we handle your grievance, you may complain to the Data
+      Protection Board of India through its online portal.
+    check_hints:
+      patterns:
+        - '\bData Protection Board\b'
+        - '\b(?:complain|complaint)\w*\b[^.]{0,80}\bBoard\b'
+    examples:
+      match:
+        - If you are not satisfied with our response, you may complain to the Data Protection Board of India.
+      no_match:
+        - Our board of directors reviews this policy every year.
+    source:
+      doc: act
+      quote: >-
+        the manner in which the Data Principal may make a complaint to the Board
+      verified: true
+
+  - id: dpdp.notice.language
+    section: s.6(3)
+    also_cites: ["s.5(3)"]
+    title: Notice offered in English or an Eighth Schedule language
+    type: required
+    severity: minor
+    basis: statute
+    what_it_means: >-
+      People must have the option to read the consent request in English or in any language
+      listed in the Eighth Schedule to the Constitution (Hindi, Tamil, Bengali and others).
+    how_to_fix: >-
+      This notice is available in English and in any language listed in the Eighth Schedule to
+      the Constitution of India. Choose your language at the top of this page.
+    check_hints:
+      patterns:
+        - '\b(?:English|Hindi|Eighth Schedule|regional languages?|Indian languages?|other languages?)\b[^.]{0,80}\b(?:notice|policy|available|request|version)\b'
+        - '\b(?:notice|policy)\b[^.]{0,80}\b(?:available|access)\w*\b[^.]{0,80}\b(?:Hindi|Eighth Schedule|languages?)\b'
+    examples:
+      match:
+        - This notice is available in English and in any language listed in the Eighth Schedule to the Constitution.
+      no_match:
+        - This policy is written in plain language.
+    source:
+      doc: act
+      quote: >-
+        giving her the option to access such request in English or any language specified in the
+        Eighth Schedule to the Constitution
+      verified: true
+
+  - id: dpdp.consent.invalid
+    section: s.6(1)
+    also_cites: ["s.6(2)"]
+    title: Consent must be a clear affirmative action, not implied or bundled
+    type: prohibited
+    severity: critical
+    basis: statute
+    what_it_means: >-
+      Consent must be free, specific, informed, unconditional and unambiguous, given by a clear
+      affirmative action. "By using this site you consent", pre-ticked boxes, and consent that
+      waives the right to complain are not valid consent.
+    how_to_fix: >-
+      We ask for your consent separately for each purpose, using unticked checkboxes that you
+      choose to tick. Using our website does not by itself mean you consent.
+    check_hints:
+      patterns:
+        - '\bby (?:using|accessing|visiting|viewing|continuing to use|browsing|downloading|installing|signing up|registering)\b[^.]{0,100}\b(?:consent|agree)\w*\b[^.]{0,60}\b(?:collect|process|use|shar|personal|data|information|polic)'
+        - '\bdeemed to (?:have )?(?:consent|given)\w*'
+        - '\bpre-?(?:ticked|checked|selected)\b'
+        - '\bimplied consent\b'
+        - '\bwaive\w*\b[^.]{0,60}\b(?:complain|complaint|Board)\b'
+        # Take it or leave it: agreement inferred from continuing to use the service.
+        - '\bif you do not (?:agree|accept|consent)\b[^.]{0,160}\b(?:stop using|do not (?:continue to )?(?:use|access)|discontinue|cease (?:to use|using))\b'
+        - '\b(?:continued|your|any) (?:use|access)\b[^.]{0,160}\b(?:signif|constitut|deem|mean|indicat|impl)\w*\b[^.]{0,40}\b(?:accept|agree|consent)\w*'
+        # Cookies set unless the user has switched them off.
+        - '\bunless you\b[^.]{0,80}\b(?:refuse|disable|block|reject)\w*\b[^.]{0,40}\bcookies\b'
+    examples:
+      match:
+        - By using our app, you consent to the collection and use of your personal data as described here.
+        - You waive your right to file any complaint with the Data Protection Board.
+        - By viewing the Platform, you agree to be bound by this Privacy Policy.
+        - If you do not agree with this Policy, please stop using our services immediately.
+        - Continued use of the service after changes signifies your acceptance of them.
+        - Your use of the app after an updated Policy becomes effective will indicate your acceptance of it.
+        - Unless you have set your browser to refuse cookies, our system will issue cookies when you log on.
+      no_match:
+        - We ask for your consent through a clear opt-in checkbox that is unticked by default.
+        - If you do not agree to marketing emails, leave the box unticked; you can still use the app.
+        - Your use of location data means we can show you nearby drivers.
+    source:
+      doc: act
+      quote: >-
+        The consent given by the Data Principal shall be free, specific, informed, unconditional and
+        unambiguous with a clear affirmative action
+      verified: true
+
+  - id: dpdp.consent.withdrawal_ease
+    section: s.6(4)
+    also_cites: ["DPDP Rules r.3(c)(i)"]
+    title: Withdrawing consent must be as easy as giving it
+    type: prohibited
+    severity: critical
+    basis: statute
+    what_it_means: >-
+      If people gave consent with a tap, they must be able to withdraw it just as easily. Requiring
+      a signed letter, a visit, a long notice period, or saying consent is irrevocable breaks this.
+    how_to_fix: >-
+      You can withdraw your consent at any time, as easily as you gave it, from Settings > Privacy
+      or by emailing privacy@yourcompany.in. We act on withdrawals within a reasonable time.
+    check_hints:
+      patterns:
+        - '\bwithdraw\w*\b[^.]{0,120}\b(?:in writing|written (?:request|notice|letter)|signed letter|by (?:registered )?post|by courier|notari[sz]ed|in person|visit (?:our|the) office|physical (?:form|letter))\b'
+        - '\bwithdraw\w*\b[^.]{0,120}\b(?:\d+|thirty|sixty|ninety)\s*(?:business |working )?days\b'
+        - '\b(?:cannot|can ?not|may not|unable to)\s+(?:be\s+)?withdraw\w*\b[^.]{0,40}\bconsent\b'
+        - '\bconsent\b[^.]{0,40}\b(?:is |are )?(?:irrevocable|cannot be withdrawn|may not be withdrawn)\b'
+    examples:
+      match:
+        - To withdraw consent, you must send a signed letter by post to our registered office.
+        - Your consent is irrevocable.
+      no_match:
+        - You may withdraw consent at any time from Settings, as easily as you gave it.
+    source:
+      doc: act
+      quote: >-
+        such Data Principal shall have the right to withdraw her consent at any time, with the ease
+        of doing so being comparable to the ease with which such consent was given
+      verified: true
+
+  - id: dpdp.consent.stop_after_withdrawal
+    section: s.6(6)
+    title: Processing stops after consent is withdrawn
+    type: required
+    severity: major
+    basis: best_practice
+    what_it_means: >-
+      After someone withdraws consent you, and your processors, must stop processing their data
+      within a reasonable time, unless a law requires you to continue.
+    how_to_fix: >-
+      Once you withdraw consent, we and our service providers will stop processing your personal
+      data within a reasonable time, unless the law requires us to keep processing it.
+    check_hints:
+      patterns:
+        - '\b(?:after|upon|once|when|if)\b[^.]{0,40}\bwithdraw\w*\b[^.]{0,140}\b(?:stop|cease|no longer)\b'
+        - '\b(?:stop|cease)\w*\b[^.]{0,80}\bprocess\w*\b[^.]{0,80}\bwithdraw\w*'
+    examples:
+      match:
+        - Once you withdraw consent, we and our processors will stop processing your personal data within a reasonable time.
+      no_match:
+        - You can withdraw consent from Settings.
+    source:
+      doc: act
+      quote: >-
+        the Data Fiduciary shall, within a reasonable time, cease and cause its Data Processors to
+        cease processing the personal data of such Data Principal
+      verified: true
+
+  - id: dpdp.basis.legitimate_interest
+    section: s.7
+    also_cites: ["s.4"]
+    title: Relies on "legitimate interests", a ground DPDP does not recognise
+    type: prohibited
+    severity: major
+    basis: statute
+    what_it_means: >-
+      DPDP allows processing only with consent or for the specific "legitimate uses" listed in
+      section 7. "Legitimate interests" is a GDPR concept; a policy copied from a GDPR template
+      that relies on it has no lawful basis under Indian law for that processing.
+    how_to_fix: >-
+      Replace "legitimate interests" with consent, or with the specific section 7 use that
+      applies (for example, a purpose for which you voluntarily gave us your data and have not
+      objected).
+    check_hints:
+      patterns:
+        - '\blegitimate\s+(?:[a-z]+\s+){0,2}interests?\b'
+    examples:
+      match:
+        - We process your data on the basis of our legitimate interests in improving our services.
+        - Your personal information may be used for the Company's legitimate business interests.
+      no_match:
+        - We may process data for certain legitimate uses permitted under section 7 of the DPDP Act.
+    source:
+      doc: act
+      quote: >-
+        A Data Fiduciary may process personal data of a Data Principal for any of following uses
+      verified: true
+
+  - id: dpdp.fiduciary.accuracy
+    section: s.8(3)
+    title: Says personal data is kept accurate and complete
+    type: required
+    severity: minor
+    basis: best_practice
+    what_it_means: >-
+      Where data is used to make decisions about a person or shared with another business, you must
+      keep it complete, accurate and consistent.
+    how_to_fix: >-
+      We take reasonable steps to keep your personal data complete, accurate and consistent,
+      especially where it is used to make decisions about you or shared with others.
+    check_hints:
+      patterns:
+        - '\b(?:accura\w*|completeness|up[- ]to[- ]date|consisten\w*)\b[^.]{0,80}\b(?:personal data|your data|your information|records?)\b'
+        - '\b(?:personal data|your data|your information)\b[^.]{0,60}\b(?:accurate|complete|up[- ]to[- ]date)\b'
+    examples:
+      match:
+        - We take reasonable steps to keep your personal data accurate, complete and consistent.
+      no_match:
+        - We collect your name and email.
+    source:
+      doc: act
+      quote: >-
+        the Data Fiduciary processing such personal data shall ensure its completeness, accuracy
+        and consistency
+      verified: true
+
+  - id: dpdp.fiduciary.security
+    section: s.8(5)
+    also_cites: ["DPDP Rules r.6"]
+    title: Describes reasonable security safeguards
+    type: required
+    severity: major
+    basis: best_practice
+    what_it_means: >-
+      You must protect personal data with reasonable security safeguards; the Rules set a minimum
+      including encryption or masking, access control, logging and backups.
+    how_to_fix: >-
+      We protect your data with encryption in transit and at rest, role-based access controls,
+      access logs that we monitor and keep for at least one year, and regular backups.
+    check_hints:
+      patterns:
+        - '\b(?:encrypt\w*|security (?:safeguards|measures|practices)|safeguards?|access controls?|firewalls?|TLS|SSL|secure servers?)\b'
+    examples:
+      match:
+        - We protect your data using encryption, access controls and regular security reviews.
+      no_match:
+        - We collect your name.
+    source:
+      doc: act
+      quote: >-
+        by taking reasonable security safeguards to prevent personal data breach
+      verified: true
+
+  - id: dpdp.fiduciary.breach_intimation
+    section: s.8(6)
+    also_cites: ["DPDP Rules r.7"]
+    title: Commits to tell users and the Board about a data breach
+    type: required
+    severity: major
+    basis: best_practice
+    what_it_means: >-
+      If a personal data breach happens you must inform each affected person without delay, and
+      the Data Protection Board without delay with a detailed report within 72 hours.
+    how_to_fix: >-
+      If a personal data breach affects you, we will tell you without delay, explaining what
+      happened, the likely consequences and what you can do, and we will inform the Data
+      Protection Board as the law requires.
+    check_hints:
+      patterns:
+        # The company must be the one notifying: "you must notify us of any breach" does not count.
+        - '\b(?:breach|unauthori[sz]ed access|security incident)\w*\b[^.]{0,120}\b(?:we|us)\b[^.]{0,40}\b(?:notif\w*|inform(?!ation)\w*|intimat\w*|tell|alert\w*)'
+        - '\bwe (?:will|shall|would|may|must)\b[^.]{0,60}\b(?:notif\w*|inform(?!ation)\w*|intimat\w*|tell|alert\w*)\b[^.]{0,120}\b(?:breach|security incident|unauthori[sz]ed access)'
+    examples:
+      match:
+        - If a personal data breach occurs, we will inform you and the Data Protection Board without delay.
+        - We will notify affected users of any security incident involving their data.
+      no_match:
+        - We protect your data using encryption.
+        - You agree to immediately notify us of any unauthorised use of your account or any other breach of security.
+        - We may use information to investigate potential breaches of our security or license agreements.
+    source:
+      doc: act
+      quote: >-
+        In the event of a personal data breach, the Data Fiduciary shall give the Board and each
+        affected Data Principal, intimation of such breach
+      verified: true
+
+  - id: dpdp.fiduciary.breach_disclaimer
+    section: s.8(5)
+    also_cites: ["s.8(1)"]
+    title: Disclaims responsibility for data breaches
+    type: prohibited
+    severity: major
+    basis: statute
+    what_it_means: >-
+      You stay responsible for protecting personal data, including data your processors handle,
+      "irrespective of any agreement to the contrary". A clause saying you are not responsible for
+      breaches or hacking misstates the law and will not protect you.
+    how_to_fix: >-
+      Remove the disclaimer. Instead describe your safeguards and commit to notifying affected
+      users and the Data Protection Board if a breach happens.
+    check_hints:
+      patterns:
+        - '\b(?:not (?:be )?(?:held )?(?:responsible|liable)|no (?:responsibility|liability)|disclaim\w*)\b[^.]{0,120}\b(?:breach\w*|unauthori[sz]ed (?:access|use|disclosure)|intercept\w*|hack\w*|theft|security of (?:your )?(?:data|information)|loss of (?:your )?data)\b'
+        # A liability exclusion whose list of excluded events (often in the next sentence) includes breaches.
+        - ['\bnot (?:be )?(?:held )?(?:responsible|liable)\b', '\b(?:hack\w*|breach(?:es)? of security|unauthori[sz]ed access)']
+        - '\b(?:breach\w*|unauthori[sz]ed (?:access|use)|intercept\w*|hack\w*)\b[^.]{0,100}\b(?:not (?:be )?(?:responsible|liable)|at your own risk)\b'
+        - '\brelease (?:us|[A-Z]\w+) from\b[^.]{0,120}\b(?:claims?|liabilit\w*)\b[^.]{0,120}\b(?:unauthori[sz]ed|intercept\w*|breach\w*|hack\w*)'
+        # "Use at your own risk" in a clause about security or transmission of data.
+        - ['\bat your own risk\b', '\b(?:secur\w*|transmission|transmitted|encrypt\w*|breach\w*)\b']
+    examples:
+      match:
+        - We are not responsible for any unauthorised access to or hacking of your personal data.
+        - You release us from all claims arising from the unauthorized use of information intercepted in transmission.
+        - No data transmission over the Internet is fully secure, so you use the website at your own risk.
+        - We shall not be held responsible for any loss of your Information caused by a Force Majeure Event. Force Majeure includes computer hacking.
+      no_match:
+        - We remain responsible for protecting your data, including when our processors handle it.
+        - You try beta features at your own risk of losing unsaved notes.
+    source:
+      doc: act
+      quote: >-
+        A Data Fiduciary shall, irrespective of any agreement to the contrary or failure of a Data
+        Principal to carry out the duties provided under this Act, be responsible for complying
+        with the provisions of this Act
+      verified: true
+
+  - id: dpdp.fiduciary.erasure
+    section: s.8(7)
+    also_cites: ["s.12(3)", "DPDP Rules r.8"]
+    title: Says data is erased once the purpose is served or consent is withdrawn
+    type: required
+    severity: major
+    basis: best_practice
+    what_it_means: >-
+      You must erase personal data when consent is withdrawn or the purpose is no longer served,
+      unless a law requires you to keep it. The Rules also require keeping processing logs for at
+      least one year.
+    how_to_fix: >-
+      We erase your personal data when you withdraw consent or when it is no longer needed for the
+      purpose it was collected for, unless a law requires us to keep it. Records of processing are
+      kept for one year as the DPDP Rules require, then erased.
+    check_hints:
+      patterns:
+        - '\b(?:erase|delete|destroy|anonymi[sz]e)\w*\b[^.]{0,120}(?:\bno longer (?:needed|necessary|required)\b|\bpurposes?\b[^.]{0,40}\b(?:served|fulfilled|complete)\b|\bwithdraw\w*|\baccount (?:is )?(?:closed|deleted)\b)'
+        - '\b(?:retain|keep|store)\w*\b[^.]{0,80}\bonly (?:for )?as long as\b'
+        - '\b(?:after|upon|once|at the end of)\b[^.]{0,80}\b(?:period|account|relationship)\b[^.]{0,80}\b(?:deleted|erased|destroyed|anonymi[sz]ed)\b'
+    examples:
+      match:
+        - We erase your personal data when it is no longer needed for the purpose it was collected for, unless the law requires us to keep it.
+        - After this retention period ends, your data is deleted or anonymised.
+      no_match:
+        - We store your data on secure servers.
+    source:
+      doc: act
+      quote: >-
+        erase personal data, upon the Data Principal withdrawing her consent or as soon as it is
+        reasonable to assume that the specified purpose is no longer being served, whichever is earlier
+      verified: true
+
+  - id: dpdp.fiduciary.indefinite_retention
+    section: s.8(7)
+    title: Keeps personal data indefinitely or at the company's discretion
+    type: prohibited
+    severity: major
+    basis: statute
+    what_it_means: >-
+      Keeping data "indefinitely" or "as long as we see fit" conflicts with the duty to erase data
+      once its purpose is served. Retention is allowed only for the purpose or where a law requires it.
+    how_to_fix: >-
+      State a retention period for each kind of data (for example, account data until you close
+      your account; order records for the period tax law requires), then erase it.
+    check_hints:
+      patterns:
+        - '\b(?:retain|keep|store|hold)\w*\b[^.]{0,80}\b(?:indefinitely|forever|permanently|perpetually|for as long as we (?:deem|consider|see fit|wish|like|want)|at our (?:sole )?discretion)'
+        - '\b(?:retain|keep|store)\w*\b[^.]{0,60}\beven after\b[^.]{0,60}\b(?:delete|close|withdraw)\w*'
+      unless:
+        - '\b(?:required|requires|mandated|obliged) (?:by|under) (?:the )?(?:law|applicable law|DPDP)\b'
+        - '\bone year\b'
+    examples:
+      match:
+        - We may retain your personal data indefinitely for our business purposes.
+      no_match:
+        - We keep order records for one year after delivery, as required by law, and then erase them.
+    source:
+      doc: act
+      quote: >-
+        A Data Fiduciary shall, unless retention is necessary for compliance with any law for the
+        time being in force, erase personal data
+      verified: true
+
+  - id: dpdp.fiduciary.contact
+    section: s.8(9)
+    also_cites: ["s.6(3)", "DPDP Rules r.9"]
+    title: Publishes contact details of a DPO or person who answers privacy questions
+    type: required
+    severity: critical
+    basis: statute
+    what_it_means: >-
+      You must prominently publish the business contact details of your Data Protection Officer
+      (if you have one) or of a person who can answer questions about how you process personal data.
+    how_to_fix: >-
+      Questions about how we process your personal data can be sent to our Privacy Contact,
+      [Name, Designation], at privacy@yourcompany.in or +91 XXXXX XXXXX.
+    check_hints:
+      patterns:
+        - '\b(?:Data Protection Officer|DPO|grievance officer|privacy (?:officer|contact|team)|contact (?:us|person))\b[^.]{0,160}(?:@|\+?\d[\d\s-]{7,}|\b(?:email|e-mail|phone|address)\b)'
+        - '\b(?:questions|queries|concerns)\b[^.]{0,100}\b(?:contact|write to|email|reach)\b'
+        # A named officer and an email address in the same clause or contact block, in any order;
+        # emails are often written as name[@]domain[.]com to deter scrapers.
+        - ['\b(?:Data Protection Officer|DPO|grievance\s?officer|nodal officer|privacy officer)', '(?:@|\[@\]|\(at\)|\[at\])']
+    examples:
+      match:
+        - Questions about how we process your data can be sent to our Data Protection Officer, Priya Sharma, at dpo@example.in.
+        - Write to legal[@]example[.]com. The designated Data Protection Officer is Mr A. Kumar.
+      no_match:
+        - We value your feedback.
+    source:
+      doc: act
+      quote: >-
+        A Data Fiduciary shall publish, in such manner as may be prescribed, the business contact
+        information of a Data Protection Officer, if applicable, or a person who is able to answer
+        on behalf of the Data Fiduciary, the questions, if any, raised by the Data Principal about
+        the processing of her personal data
+      verified: true
+
+  - id: dpdp.fiduciary.grievance
+    section: s.13
+    also_cites: ["s.8(10)", "DPDP Rules r.14(3)"]
+    title: Grievance process with a published response period
+    type: required
+    severity: major
+    basis: rules
+    what_it_means: >-
+      You need an effective grievance process and must publish how long you take to respond, which
+      the Rules cap at ninety days. People must use it before going to the Board.
+    how_to_fix: >-
+      To raise a grievance, write to grievance@yourcompany.in. We will respond within 30 days, and
+      in any case within ninety days of receiving it.
+    check_hints:
+      patterns:
+        - '\bgrievances?\b'
+        - '\bcomplaints?\b[^.]{0,80}\b(?:respond|resolve|address|redress)\w*'
+      with:
+        - '\b(?:within|not exceeding|no later than|not later than)\b[^.]{0,30}\b(?:\d+|thirty|sixty|ninety)\s*(?:days|hours)\b'
+    examples:
+      match:
+        - We will respond to any grievance within 30 days of receiving it, and in any case not later than ninety days.
+      no_match:
+        - Contact us if you have a grievance.
+    source:
+      doc: rules
+      quote: >-
+        within a reasonable period not exceeding ninety days under its grievance redressal system
+        for responding to the grievances of Data Principals
+      verified: true
+
+  - id: dpdp.children.parental_consent
+    section: s.9(1)
+    also_cites: ["DPDP Rules r.10"]
+    title: Children (under 18) need verifiable parental consent
+    type: required
+    severity: critical
+    basis: best_practice
+    what_it_means: >-
+      A child under DPDP is anyone under 18. Before processing a child's data you need verifiable
+      consent from a parent. US-style templates that only mention "children under 13" do not meet
+      this. Either obtain verifiable parental consent or say clearly that the service is not for
+      under-18s and how you check age.
+    how_to_fix: >-
+      Our services are for people aged 18 or over. If you are under 18, we process your personal
+      data only with the verifiable consent of your parent or lawful guardian, which we confirm
+      using reliable identity and age details.
+    check_hints:
+      patterns:
+        - '\b(?:parent|guardian)\w*\b[^.]{0,120}\bconsent\b'
+        - '\bconsent\b[^.]{0,80}\b(?:parent|guardian)'
+        - '\b(?:under (?:the age of )?(?:18|eighteen)|minors?|children)\b[^.]{0,120}\b(?:not (?:intended|directed|meant|designed|permitted|allowed)|do not (?:knowingly )?(?:solicit|collect|process)|must be (?:at least )?(?:18|eighteen))'
+        - '\b(?:not (?:intended|directed|meant|designed)|must be (?:at least )?(?:18|eighteen))\b[^.]{0,80}\b(?:18|eighteen|children|minors?)\b'
+        - '\bdo not (?:knowingly )?(?:solicit|collect|process)\w*\b[^.]{0,80}\b(?:children|minors?|under (?:the age of )?(?:18|eighteen))'
+      unless:
+        - '\b(?:13|thirteen|16|sixteen)\b'
+    examples:
+      match:
+        - Our services are not intended for anyone under 18, and we process a child's data only with verifiable consent from a parent or lawful guardian.
+        - Our app is not meant to be used by children, and we do not knowingly solicit data from persons under the age of 18.
+        - We do not knowingly collect information from children under the age of 18 years.
+      no_match:
+        - Our services are not directed to children under 13.
+    source:
+      doc: act
+      quote: >-
+        The Data Fiduciary shall, before processing any personal data of a child or a person with
+        disability who has a lawful guardian obtain verifiable consent of the parent of such child
+      verified: true
+
+  - id: dpdp.children.tracking_ads
+    section: s.9(3)
+    title: Tracking, behavioural monitoring or targeted ads aimed at children
+    type: prohibited
+    severity: critical
+    basis: statute
+    what_it_means: >-
+      You must not track or behaviourally monitor children, or show them targeted advertising.
+      Personalised ads shown to "all users" without an age check include children.
+    how_to_fix: >-
+      We do not track or behaviourally monitor users under 18, and we do not show them targeted
+      advertising.
+    check_hints:
+      patterns:
+        - '\b(?:children|minors?|kids|users under (?:18|eighteen)|students)\b[^.]{0,120}\b(?:targeted advertis\w*|behaviou?ral (?:advertis\w*|monitoring|tracking)|personali[sz]ed ads?|track\w*)'
+        - '\b(?:targeted advertis\w*|behaviou?ral (?:advertis\w*|monitoring)|personali[sz]ed ads?)\b[^.]{0,120}\b(?:children|minors?|kids|all users(?:, including| regardless of age))'
+      unless:
+        - '\b(?:do not|does not|never|will not|won''t|no)\b[^.]{0,40}\b(?:track|target|show|serve|use|monitor)\w*'
+    examples:
+      match:
+        - We show personalised ads to all users, including children, based on their activity.
+      no_match:
+        - We do not track children or show them targeted advertising.
+    source:
+      doc: act
+      quote: >-
+        A Data Fiduciary shall not undertake tracking or behavioural monitoring of children or
+        targeted advertising directed at children.
+      verified: true
+
+  - id: dpdp.rights.access
+    section: s.11
+    also_cites: ["DPDP Rules r.14(1)"]
+    title: Explains the right to a summary of personal data and who it was shared with
+    type: required
+    severity: major
+    basis: rules
+    what_it_means: >-
+      People can ask for a summary of their personal data, your processing activities, and the
+      identities of others you shared it with. You must publish how to make that request.
+    how_to_fix: >-
+      You can ask us for a summary of the personal data we process about you, what we do with it,
+      and the businesses we have shared it with, by writing to privacy@yourcompany.in from your
+      registered email address.
+    check_hints:
+      patterns:
+        - '\b(?:right to|you (?:can|may))\b[^.]{0,40}\b(?:access|obtain (?:a )?(?:summary|copy)|request (?:a )?(?:summary|copy)|ask (?:us )?for (?:a )?(?:summary|copy))\b'
+        - '\bsummary of (?:the |your )?personal data\b'
+    examples:
+      match:
+        - You have the right to obtain a summary of the personal data we process about you and the names of those we have shared it with.
+      no_match:
+        - We collect your email.
+    source:
+      doc: act
+      quote: >-
+        a summary of personal data which is being processed by such Data Fiduciary and the
+        processing activities undertaken by that Data Fiduciary with respect to such personal data
+      verified: true
+
+  - id: dpdp.rights.correction_erasure
+    section: s.12
+    also_cites: ["DPDP Rules r.14(1)"]
+    title: Explains the right to correct, complete, update and erase data
+    type: required
+    severity: major
+    basis: rules
+    what_it_means: >-
+      People can ask you to correct, complete, update or erase their personal data, and you must
+      publish how they make that request.
+    how_to_fix: >-
+      You can ask us to correct, complete, update or erase your personal data from Settings >
+      Account, or by writing to privacy@yourcompany.in.
+    check_hints:
+      patterns:
+        - '\b(?:correct|update|complete|rectify|erase|delete)\w*\b[^.]{0,80}\b(?:personal data|data|information|details)\b'
+      with:
+        - '\b(?:right|you (?:can|may)|request|ask us)\b'
+    examples:
+      match:
+        - You may ask us to correct, complete, update or erase your personal data.
+      no_match:
+        - We update this policy from time to time.
+    source:
+      doc: act
+      quote: >-
+        A Data Principal shall have the right to correction, completion, updating and erasure of
+        her personal data
+      verified: true
+
+  - id: dpdp.rights.nomination
+    section: s.14
+    also_cites: ["DPDP Rules r.14(4)"]
+    title: Explains the right to nominate someone
+    type: required
+    severity: minor
+    basis: rules
+    what_it_means: >-
+      People can nominate another individual to exercise their rights if they die or become
+      incapacitated. Your policy should say how.
+    how_to_fix: >-
+      You may nominate another person to exercise your rights under the DPDP Act in the event of
+      your death or incapacity, from Settings > Privacy > Nominee.
+    check_hints:
+      patterns:
+        - '\bnominat\w*'
+        - '\bnominee\b'
+    examples:
+      match:
+        - You may nominate another individual to exercise your rights in the event of your death or incapacity.
+      no_match:
+        - You may contact us at any time.
+    source:
+      doc: act
+      quote: >-
+        A Data Principal shall have the right to nominate, in such manner as may be prescribed, any
+        other individual, who shall, in the event of death or incapacity of the Data Principal,
+        exercise the rights of the Data Principal
+      verified: true
+
+  - id: dpdp.cross_border.disclosure
+    section: s.16
+    also_cites: ["DPDP Rules r.15"]
+    title: Says whether data is transferred outside India
+    type: required
+    severity: minor
+    basis: best_practice
+    what_it_means: >-
+      Transfers outside India are allowed except to countries the Government restricts by
+      notification. Saying where data is stored and transferred lets you show you checked.
+    how_to_fix: >-
+      Your data is stored in India and may be processed by our service providers in [countries].
+      We do not transfer personal data to any country restricted by the Government of India.
+    check_hints:
+      patterns:
+        - '\b(?:outside (?:of )?India|other countries|abroad|cross-border|international(?:ly)? transfer\w*|servers? (?:located )?(?:in|outside)\b)'
+    examples:
+      match:
+        - Your data may be stored on servers located outside India, in Singapore and the United States.
+      no_match:
+        - We store your data securely.
+    source:
+      doc: act
+      quote: >-
+        The Central Government may, by notification, restrict the transfer of personal data by a
+        Data Fiduciary for processing to such country or territory outside India as may be so notified.
+      verified: true

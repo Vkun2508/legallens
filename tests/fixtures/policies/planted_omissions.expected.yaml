@@ -1,0 +1,15 @@
+# A short template-style policy: nothing it says is unlawful, but most DPDP requirements are absent.
+business_type: app
+violations: []
+missing:
+  - dpdp.notice.board_complaint
+  - dpdp.notice.language
+  - dpdp.consent.stop_after_withdrawal
+  - dpdp.fiduciary.accuracy
+  - dpdp.fiduciary.breach_intimation
+  - dpdp.fiduciary.contact
+  - dpdp.fiduciary.grievance
+  - dpdp.children.parental_consent
+  - dpdp.rights.correction_erasure
+  - dpdp.rights.nomination
+  - dpdp.cross_border.disclosure

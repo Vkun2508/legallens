@@ -1,0 +1,13 @@
+# Marketplace terms of sale. These are terms, not a privacy policy, so the evaluation is limited
+# to the E-Commerce Rules and dark patterns (scope_laws); DPDP rules would all be missing.
+business_type: marketplace
+scope_laws: [ecommerce, dark_patterns]
+violations:
+  - {rule_id: ecom.one_sided_cancellation_charges, clause_contains: "cancellation fee"}
+  - {rule_id: ecom.pre_ticked_consent, clause_contains: "by default"}
+  - {rule_id: dark.drip_pricing, clause_contains: "Convenience fees"}
+  - {rule_id: dark.bait_and_switch, clause_contains: "substitute"}
+  - {rule_id: dark.forced_action, clause_contains: "must also subscribe"}
+missing:
+  - ecom.grievance_officer
+  - ecom.seller_info
