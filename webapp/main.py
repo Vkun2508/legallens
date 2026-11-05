@@ -1,8 +1,8 @@
-"""LegalLens web demo: upload an agreement, see its clauses and their offsets.
+"""LegalLens web app: audit a privacy policy or terms against Indian law.
 
 Run locally with:  uvicorn webapp.main:app
-(uvicorn listens on 127.0.0.1 by default; uploads may be real financial
-agreements, so exposing it more widely is a separate decision.)
+(uvicorn listens on 127.0.0.1 by default; uploads may be unpublished policies, so
+exposing it more widely is a separate decision.)
 
 Uploads are processed in memory and discarded after the response: nothing is
 written to disk or kept, and logs record sizes and counts, never content.
@@ -15,24 +15,39 @@ import re
 import time
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from io import BytesIO
+from typing import Callable
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.formparsers import MultiPartParser
 
 from legallens import Assessment, Clause, assess, load_bytes, normalize_text, segment
-from legallens.risk import CATEGORIES, CATEGORY_BY_KEY, TIER_LABELS, TIERS
+from legallens.compliance.audit import PARTIAL_REASONS, AuditInputError
+from legallens.compliance.audit import audit as run_audit
+from legallens.compliance.llm import LLMChecker
+from legallens.compliance.report import AuditReport
+from legallens.compliance.rulebook import default_rulebook
+from legallens.webpage import FetchedPolicy, FetchError, display_url, fetch_policy
+from webapp.audit_view import TIER_LABELS, build_view, citation
+from webapp.landing_view import build_scan
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_PAGES = 200
 ALLOWED_SUFFIXES = (".pdf", ".txt", ".md")
 LONG_CLAUSE_CHARS = 1500
+BUSINESS_TYPES = (
+    ("app", "App or website", "DPDP Act and dark patterns"),
+    ("ecommerce", "Online store", "Adds the E-Commerce Rules"),
+    ("marketplace", "Marketplace", "Adds the rules on seller information"),
+)
 # Multipart framing around the file adds a little to the request size.
 _MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 64 * 1024
 # A heading carried by this share of clauses is probably a document title.
@@ -45,7 +60,7 @@ _CARRIED_HEADING_MIN_CLAUSES = 5
 MultiPartParser.spool_max_size = _MAX_REQUEST_BYTES
 
 _HERE = Path(__file__).resolve().parent
-SAMPLE_TEXT = (_HERE.parent / "data" / "samples" / "sample_tos.txt").read_text(encoding="utf-8")
+SAMPLE_TEXT = (_HERE.parent / "data" / "samples" / "sample_privacy_policy.txt").read_text(encoding="utf-8")
 logger = logging.getLogger("legallens.webapp")
 
 app = FastAPI(title="LegalLens")
@@ -68,6 +83,16 @@ def _doc_breaks(text: str) -> Markup:
 templates.env.filters["doc_breaks"] = _doc_breaks
 
 
+def get_llm_checker() -> LLMChecker | None:
+    """The AI checker for audits; None means the default (used only when an API key is set)."""
+    return None
+
+
+def get_url_fetcher() -> Callable[[str], FetchedPolicy]:
+    """Fetches a policy from a web address (tests replace it, so pytest never touches the network)."""
+    return fetch_policy
+
+
 class InputError(Exception):
     def __init__(self, message: str, status_code: int = 400) -> None:
         super().__init__(message)
@@ -77,6 +102,8 @@ class InputError(Exception):
 
 @dataclass
 class Analysis:
+    """Clause segmentation with v1's keyword risk tags: the /api/segment response."""
+
     source: str
     text: str
     clauses: list[Clause]
@@ -89,6 +116,27 @@ class Analysis:
             "text": self.text,
             "clauses": [{**c.to_dict(), "risk": r.to_dict()} for c, r in zip(self.clauses, self.risks)],
             "warnings": self.warnings,
+        }
+
+
+@dataclass
+class AuditResult:
+    source: str
+    text: str
+    clauses: list[Clause]
+    report: AuditReport
+    warnings: list[str]
+    generated_at: str
+
+    def to_dict(self) -> dict:
+        """The /api/audit response, also embedded in the results page for export."""
+        return {
+            "source": self.source,
+            "generated_at": self.generated_at,
+            **self.report.to_dict(),
+            "warnings": self.warnings,
+            "clauses": [c.to_dict() for c in self.clauses],
+            "text": self.text,
         }
 
 
@@ -109,29 +157,32 @@ def index(request: Request) -> Response:
     return templates.TemplateResponse(request, "index.html", _index_context())
 
 
-@app.post("/analyze", response_class=HTMLResponse)
-def analyze_page(
-    request: Request, file: UploadFile | None = File(None), text: str = Form("")
+@app.post("/audit", response_class=HTMLResponse)
+def audit_page(
+    request: Request,
+    file: UploadFile | None = File(None),
+    text: str = Form(""),
+    business_type: str = Form("app"),
+    name: str = Form(""),
+    url: str = Form(""),
+    llm_checker: LLMChecker | None = Depends(get_llm_checker),
+    fetcher: Callable[[str], FetchedPolicy] = Depends(get_url_fetcher),
 ) -> Response:
     try:
-        analysis = _analyze(file, text)
+        result = _audit(file, text, business_type, "auto", llm_checker, name=name, url=url, fetcher=fetcher)
     except InputError as exc:
-        return _error(request, exc.message, exc.status_code)
-    cards = _cards(analysis)
+        form = {"text": text, "business_type": business_type, "url": url}
+        return _error(request, exc.message, exc.status_code, form=form)
     return templates.TemplateResponse(
         request,
-        "results.html",
+        "audit.html",
         {
-            "analysis": analysis,
-            "cards": cards,
-            "print_groups": [(t, [c for c in cards if c["risk"].tier == t]) for t in TIERS],
-            "generated_on": f"{date.today():%d %B %Y}".lstrip("0"),
-            "summary": _risk_summary(analysis.risks),
-            "rows": _doc_rows(analysis.text, cards),
-            "brief": _brief(cards),
+            "result": result,
+            "view": build_view(result.text, result.clauses, result.report),
             "tier_labels": TIER_LABELS,
+            "generated_on": f"{date.today():%d %B %Y}".lstrip("0"),
             "long_clause_chars": LONG_CLAUSE_CHARS,
-            "result": analysis.to_dict(),
+            "result_data": result.to_dict(),
         },
     )
 
@@ -144,8 +195,82 @@ def analyze_api(file: UploadFile | None = File(None), text: str = Form("")) -> d
         raise HTTPException(exc.status_code, exc.message) from exc
 
 
+@app.post("/api/audit")
+def audit_api(
+    file: UploadFile | None = File(None),
+    text: str = Form(""),
+    business_type: str = Form("app"),
+    mode: str = Form("auto"),
+    llm_checker: LLMChecker | None = Depends(get_llm_checker),
+) -> dict:
+    """Compliance audit: score, findings with citations, missing clauses and manual checks."""
+    try:
+        return _audit(file, text, business_type, mode, llm_checker).to_dict()
+    except InputError as exc:
+        raise HTTPException(exc.status_code, exc.message) from exc
+
+
+@app.post("/api/audit-url")
+def audit_url_api(
+    url: str = Form(""),
+    business_type: str = Form("app"),
+    mode: str = Form("auto"),
+    llm_checker: LLMChecker | None = Depends(get_llm_checker),
+    fetcher: Callable[[str], FetchedPolicy] = Depends(get_url_fetcher),
+) -> dict:
+    """The same audit as /api/audit, for a policy the server fetches from a web address."""
+    if not url.strip():
+        raise HTTPException(400, "Enter the web address of your privacy policy or terms.")
+    try:
+        return _audit(None, "", business_type, mode, llm_checker, url=url, fetcher=fetcher).to_dict()
+    except InputError as exc:
+        raise HTTPException(exc.status_code, exc.message) from exc
+
+
+def _audit(file: UploadFile | None, pasted: str, business_type: str, mode: str,
+           llm_checker: LLMChecker | None, name: str = "", url: str = "",
+           fetcher: Callable[[str], FetchedPolicy] | None = None) -> AuditResult:
+    started = time.perf_counter()
+    notes: list[str] = []
+    if url.strip():
+        if (file is not None and file.filename) or pasted.strip():
+            raise InputError("Give a web address, a file or pasted text, one at a time.")
+        source, doc_text, size, notes = _read_url(url, fetcher or fetch_policy)
+    else:
+        source, doc_text, size = _read_input(file, pasted)
+    if name.strip() and source == "Pasted text":
+        source = name.strip()[:120]  # a label for pasted text, e.g. the homepage sample
+    if not doc_text.strip():
+        raise InputError("No text could be extracted. This may be a scanned PDF; paste the text instead.", 422)
+    clauses = segment(doc_text)
+    try:
+        report = run_audit(doc_text, clauses, business_type=business_type, mode=mode, llm_checker=llm_checker)
+    except AuditInputError as exc:
+        raise InputError(str(exc), exc.status_code) from exc
+    warnings = notes + _warnings(doc_text, clauses)
+    if report.mode_reason:
+        warnings.insert(0, PARTIAL_REASONS.get(report.mode_reason, "This is a keyword check only."))
+    logger.info(
+        "audited %s bytes, %d clauses, mode=%s reason=%s in %.2fs",
+        size, len(clauses), report.mode, report.mode_reason, time.perf_counter() - started,
+    )
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return AuditResult(source, doc_text, clauses, report, warnings, generated_at)
+
+
 def _analyze(file: UploadFile | None, pasted: str) -> Analysis:
     started = time.perf_counter()
+    source, text, size = _read_input(file, pasted)
+    clauses = segment(text)
+    analysis = Analysis(source, text, clauses, [assess(c.text) for c in clauses], _warnings(text, clauses))
+    logger.info(
+        "analyzed %s bytes into %d clauses in %.2fs", size, len(clauses), time.perf_counter() - started
+    )
+    return analysis
+
+
+def _read_input(file: UploadFile | None, pasted: str) -> tuple[str, str, int]:
+    """Validate the upload or pasted text and return (source name, normalized text, size in bytes)."""
     has_file = file is not None and bool(file.filename)
     if has_file == bool(pasted.strip()):
         raise InputError("Upload one file or paste text, not both or neither.")
@@ -170,18 +295,31 @@ def _analyze(file: UploadFile | None, pasted: str) -> Analysis:
         source = "Pasted text"
         text = normalize_text(pasted)
         size = len(pasted)
-
-    analysis = _build(source, text)
-    logger.info(
-        "analyzed %s bytes into %d clauses in %.2fs", size, len(analysis.clauses), time.perf_counter() - started
-    )
-    return analysis
+    return source, text, size
 
 
-def _build(source: str, text: str) -> Analysis:
-    clauses = segment(text)
-    risks = [assess(c.text) for c in clauses]
-    return Analysis(source, text, clauses, risks, _warnings(text, clauses))
+def _read_url(url: str, fetcher: Callable[[str], FetchedPolicy]) -> tuple[str, str, int, list[str]]:
+    """Fetch a policy from the web and return (source label, normalized text, size, notes)."""
+    try:
+        fetched = fetcher(url)
+    except FetchError as exc:
+        raise InputError(exc.message, exc.status_code) from exc
+    if fetched.kind == "pdf":
+        _check_pdf(fetched.body)
+        try:
+            text = load_bytes(fetched.body, ".pdf")
+        except Exception as exc:  # pypdf raises many error types on malformed files
+            raise InputError("This PDF could not be read. It may be damaged or encrypted.") from exc
+        size = len(fetched.body)
+    else:
+        text, size = fetched.text, len(fetched.text)
+    notes = []
+    if fetched.found_from:
+        notes.append(
+            f"LegalLens followed the policy link on {display_url(fetched.found_from) or fetched.found_from} "
+            f"to {display_url(fetched.url)}. If that isn't the right document, link to it directly."
+        )
+    return display_url(fetched.url) or "Web page", text, size, notes
 
 
 def _check_pdf(data: bytes) -> None:
@@ -229,87 +367,6 @@ def _warnings(text: str, clauses: list[Clause]) -> list[str]:
     return warnings
 
 
-def _segments(text: str, evidence: list) -> list[dict]:
-    """Split text around its evidence spans, labelling each matched phrase with its category."""
-    segments, pos = [], 0
-    for e in evidence:
-        if e.start > pos:
-            segments.append({"text": text[pos : e.start], "hit": None})
-        category = CATEGORY_BY_KEY[e.category]
-        segments.append({"text": text[e.start : e.end], "hit": category.label, "tier": category.tier})
-        pos = e.end
-    if pos < len(text):
-        segments.append({"text": text[pos:], "hit": None})
-    return segments
-
-
-def _doc_rows(text: str, cards: list[dict]) -> list[dict]:
-    """The document in order: clause rows (exact spans, evidence marked) and the text between them.
-
-    Evidence is found again on the span itself so its offsets fit the document text; line
-    breaks become spaces so lengths match, and only the clause's own categories are kept,
-    so a row never shows a flag its clause doesn't have.
-    """
-    rows, pos = [], 0
-
-    def gap(chunk: str) -> None:
-        if chunk.strip():
-            rows.append({"kind": "gap", "text": chunk.strip()})
-
-    for card in sorted(cards, key=lambda c: c["clause"].start):
-        clause, risk = card["clause"], card["risk"]
-        gap(text[pos : clause.start])
-        span = text[clause.start : clause.end]
-        keep = set(risk.categories)
-        evidence = [e for e in assess(span.replace("\n", " ")).evidence if e.category in keep]
-        rows.append({"kind": "clause", "card": card, "segments": _segments(span, evidence)})
-        pos = clause.end
-    gap(text[pos:])
-    return rows
-
-
-def _brief(cards: list[dict]) -> list[tuple]:
-    """Each flagged category, most severe first, with the clauses that mention it."""
-    found: dict[str, tuple] = {}
-    for card in cards:
-        for category, _ in card["categories"]:
-            found.setdefault(category.key, (category, []))[1].append(card["clause"])
-    return [found[c.key] for c in CATEGORIES if c.key in found]
-
-
-def _cards(analysis: Analysis) -> list[dict]:
-    """Per-clause display data: the clause, its risk, and its text split around evidence."""
-    cards = []
-    for clause, risk in zip(analysis.clauses, analysis.risks):
-        segments = _segments(clause.text, risk.evidence)
-        phrases = {}
-        for e in risk.evidence:  # first few distinct phrases per category, for "Why flagged"
-            seen = phrases.setdefault(e.category, [])
-            if e.text.lower() not in (p.lower() for p in seen) and len(seen) < 3:
-                seen.append(e.text)
-        cards.append(
-            {
-                "clause": clause,
-                "risk": risk,
-                "segments": segments,
-                "categories": [(CATEGORY_BY_KEY[k], phrases[k]) for k in risk.categories],
-            }
-        )
-    return cards
-
-
-def _risk_summary(risks: list[Assessment]) -> dict:
-    total = len(risks) or 1
-    counts = Counter(r.tier for r in risks)
-    tiers = [
-        {"key": t, "count": counts[t], "percent": round(100 * counts[t] / total, 2)}
-        for t in (*TIERS, "none")
-    ]
-    tally = Counter(k for r in risks for k in r.categories)
-    categories = [(c, tally[c.key]) for c in CATEGORIES if tally[c.key]]
-    return {"tiers": tiers, "categories": categories, "flagged": len(risks) - counts["none"]}
-
-
 def _limits() -> dict:
     return {
         "max_mb": MAX_UPLOAD_BYTES // (1024 * 1024),
@@ -319,37 +376,94 @@ def _limits() -> dict:
 
 
 def _sample_view() -> dict:
-    """The bundled sample, analyzed once: the homepage lens and worked example read it."""
-    cards = _cards(_build("Sample agreement", normalize_text(SAMPLE_TEXT)))
-    rows = _doc_rows(normalize_text(SAMPLE_TEXT), cards)
-    # The worked example: the first numbered clause with more than one matched phrase.
+    """The bundled sample policy, audited once: the homepage scan and the worked example read it."""
+    text = normalize_text(SAMPLE_TEXT)
+    clauses = segment(text)
+    report = run_audit(text, clauses, mode="keyword")
+    view = build_view(text, clauses, report)
+    clause_rows = [r for r in view["rows"] if r["kind"] == "clause"]
+    # The worked example and the lens's resting place: the hard-to-withdraw consent clause,
+    # a critical issue every founder can picture fixing.
     example = next(
-        (
-            r for r in rows
-            if r["kind"] == "clause" and r["card"]["clause"].number and sum(bool(s["hit"]) for s in r["segments"]) > 1
-        ),
-        None,
+        (r for r in clause_rows if any(i["rule_id"] == "dpdp.consent.withdrawal_ease" for i in r["issues"])),
+        next((r for r in clause_rows if r["tier"] == "high"), None),
     )
-    return {"rows": rows, "example": example}
+    # The draft-fixes excerpt on the homepage: the free trial that turns paid without notice.
+    fixes = next((r for r in clause_rows if any(i["rule_id"] == "dark.saas_billing" for i in r["issues"])), None)
+    return {"rows": view["rows"], "example": example, "fixes": fixes, "view": view,
+            "scan": build_scan(text, clauses, report)}
+
+
+def _law_table() -> list[dict]:
+    rulebook = default_rulebook()
+    rows = []
+    for law in rulebook.laws:
+        rules = [r for r in rulebook.rules if r.law == law.key]
+        rows.append({
+            "name": law.name,
+            "summary": law.summary,
+            "checked": sum(r.scope == "text" for r in rules),
+            "manual": sum(r.scope == "ui" for r in rules),
+            "applies": "All businesses" if any(r.applies_to == "all" for r in rules) else "Online stores and marketplaces",
+        })
+    return rows
+
+
+def _rule_card(rule_id: str = "dpdp.children.parental_consent") -> dict:
+    """One rule as the rulebook holds it, for the homepage: the rule Kettle's sample is missing
+    and the one the US-style "under 13" templates fail."""
+    rulebook = default_rulebook()
+    rule = next(r for r in rulebook.rules if r.id == rule_id)
+    law = next(l for l in rulebook.laws if l.key == rule.law)
+    return {
+        "id": rule.id,
+        "title": rule.title,
+        "severity": rule.severity,
+        "citation": citation({"law_name": law.short_name, "section": rule.section}),
+        "also_cites": rule.also_cites,
+        "what_it_means": rule.what_it_means,
+        "how_to_fix": rule.how_to_fix,
+        "quote": rule.source.quote,
+        "verified": rule.source.verified,
+    }
 
 
 def _index_context() -> dict:
+    in_force = date.fromisoformat(SAMPLE_VIEW["scan"]["in_force"])
     return {
         **_limits(),
+        "in_force": in_force,
+        "in_force_label": f"{in_force:%d %B %Y}".lstrip("0"),
+        "days_to_in_force": max(0, (in_force - date.today()).days),
         "sample": SAMPLE_VIEW,
         "sample_text": SAMPLE_TEXT,
         "tier_labels": TIER_LABELS,
-        "categories_by_tier": [(t, [c for c in CATEGORIES if c.tier == t]) for t in TIERS],
-        "category_count": len(CATEGORIES),
+        "laws": LAW_TABLE,
+        "rule_card": RULE_CARD,
+        "business_types": BUSINESS_TYPES,
+        "rulebook_version": default_rulebook().version,
     }
 
 
 SAMPLE_VIEW = _sample_view()
+LAW_TABLE = _law_table()
+RULE_CARD = _rule_card()
 
 
-def _error(request: Request, message: str, status_code: int) -> Response:
+def _error(request: Request, message: str, status_code: int, form: dict | None = None) -> Response:
+    """JSON for the API; for the web form, the homepage again with the message beside the form that
+    was used (the address box in the hero, or the upload form) and what the visitor entered kept."""
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": message}, status_code=status_code)
-    return templates.TemplateResponse(
-        request, "index.html", {**_index_context(), "error": message}, status_code=status_code
-    )
+    form = form or {}
+    origin = "url" if form.get("url", "").strip() else "upload"
+    context = {**_index_context(), "error": message, "error_origin": origin, "form": form}
+    return templates.TemplateResponse(request, "index.html", context, status_code=status_code)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def not_found(request: Request, exc: StarletteHTTPException) -> Response:
+    """A page in the site's own look for unknown addresses; the API keeps its JSON errors."""
+    if exc.status_code != 404 or request.url.path.startswith("/api/"):
+        return await http_exception_handler(request, exc)
+    return templates.TemplateResponse(request, "404.html", {}, status_code=404)

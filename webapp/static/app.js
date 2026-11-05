@@ -45,315 +45,40 @@
     systemDark.addEventListener("change", syncToggle);
   }
 
-  // ---------- Landing backdrop: fine print drifting past the scan line ----------
-
-  var scanText = document.querySelector(".scan-text");
-  var scanline = document.querySelector(".scanline");
-  if (scanText && scanline) initScanner(scanText, scanline);
-
-  function initScanner(el, line) {
-    var DRIFT_MS = 90000; // one copy's height every 90s
-    var first = el.querySelector(".scan-copy");
-    var unit = toArray(first.childNodes).map(function (n) { return n.cloneNode(true); });
-    var hero = line.parentNode;
-    var drift = null, marks = [], mids = [], copyHeight = 1, lineDocY = 0;
-    var flaggedCount = 0, running = false, heroVisible = true, builtFor = 0;
-
-    // Two identical copies, each at least a screen tall: drifting up by one copy
-    // lands on the same picture, so the loop has no seam.
-    function build() {
-      if (window.innerWidth === builtFor) return measure();
-      builtFor = window.innerWidth;
-      while (el.children.length > 1) el.removeChild(el.lastChild);
-      first.textContent = "";
-      unit.forEach(function (n) { first.appendChild(n.cloneNode(true)); });
-      for (var i = 0; i < 12 && first.offsetHeight < window.innerHeight; i++) {
-        first.appendChild(document.createTextNode(" "));
-        unit.forEach(function (n) { first.appendChild(n.cloneNode(true)); });
-      }
-      el.appendChild(first.cloneNode(true));
-      measure();
-    }
-
-    // Layout is read here only, never per frame.
-    function measure() {
-      copyHeight = first.offsetHeight || 1;
-      marks = toArray(el.querySelectorAll(".scan-hit"));
-      mids = marks.map(function (m) { return m.offsetTop + m.offsetHeight / 2; });
-      lineDocY = line.getBoundingClientRect().top + window.scrollY;
-      marks.forEach(function (m) { m.classList.remove("is-flagged"); });
-      flaggedCount = 0;
-      update();
-    }
-
-    // A phrase is flagged exactly when it is above the line. Flagged phrases are the
-    // first k in document order, so only those between the old and new k change.
-    function update() {
-      var offset = drift ? ((drift.currentTime || 0) % DRIFT_MS) / DRIFT_MS * copyHeight : 0;
-      var threshold = lineDocY - window.scrollY + offset;
-      var lo = 0, hi = mids.length;
-      while (lo < hi) {
-        var mid = (lo + hi) >> 1;
-        if (mids[mid] < threshold) lo = mid + 1; else hi = mid;
-      }
-      if (lo === flaggedCount) return;
-      // The loop wrapping (or a jump in scroll) changes many at once: switch those without the fade.
-      var jump = Math.abs(lo - flaggedCount) > 3;
-      if (jump) el.classList.add("is-jumping");
-      for (var i = Math.min(lo, flaggedCount); i < Math.max(lo, flaggedCount); i++) {
-        marks[i].classList.toggle("is-flagged", i < lo);
-      }
-      flaggedCount = lo;
-      if (jump) requestAnimationFrame(function () { el.classList.remove("is-jumping"); });
-    }
-
-    function frame() {
-      if (!running) return;
-      update();
-      requestAnimationFrame(frame);
-    }
-    function setRunning(on) {
-      on = on && !document.hidden && heroVisible && !reducedMotion.matches;
-      if (drift) {
-        if (on) drift.play(); else if (document.hidden) drift.pause();
-      }
-      if (on && !running) {
-        running = true;
-        requestAnimationFrame(frame);
-      }
-      running = on;
-    }
-
-    if (!reducedMotion.matches && el.animate) {
-      // Web Animations keeps the drift on the compositor; currentTime keeps the flags in step with it.
-      drift = el.animate(
-        [{ transform: "translate3d(0, 0, 0)" }, { transform: "translate3d(0, -50%, 0)" }],
-        { duration: DRIFT_MS, iterations: Infinity }
-      );
-    }
-
-    var resizeTimer = null;
-    window.addEventListener("resize", function () {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(build, 250);
-    });
-    // Static (reduced motion, or the hero off screen): scrolling still moves the line.
-    window.addEventListener("scroll", function () { if (!running) update(); }, { passive: true });
-    document.addEventListener("visibilitychange", function () { setRunning(true); });
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(function (entries) {
-        heroVisible = entries[0].isIntersecting;
-        setRunning(true);
-      }).observe(hero);
-    }
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
-    else build();
-    setRunning(true);
-  }
-
-  // ---------- Navigation menu (narrow screens) ----------
-
-  var navToggle = document.querySelector(".nav-toggle");
-  var navLinks = document.getElementById("nav-links");
-  if (navToggle && navLinks) {
-    var setNavOpen = function (open) {
-      navToggle.setAttribute("aria-expanded", String(open));
-      navLinks.classList.toggle("is-open", open);
-    };
-    navToggle.addEventListener("click", function () {
-      setNavOpen(navToggle.getAttribute("aria-expanded") !== "true");
-    });
-    navLinks.addEventListener("click", function (event) {
-      if (event.target.closest("a")) setNavOpen(false);
-    });
-    document.addEventListener("click", function (event) {
-      if (!event.target.closest(".site-nav")) setNavOpen(false);
-    });
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && navLinks.classList.contains("is-open")) {
-        setNavOpen(false);
-        navToggle.focus();
-      }
-    });
-  }
-
-  // ---------- Homepage: the lens ----------
-
-  var loupe = document.getElementById("loupe");
-  if (loupe) {
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { initLens(loupe); });
-    else initLens(loupe);
-  }
-
-  function initLens(loupe) {
-    var ZOOM = 2;
-    var KEY_STEP = 24;
-    var FIRST_PASS_MS = 900; // the one documented motion exception
-    var STEP_MS = 300;
-
-    var base = loupe.querySelector(".fine-print");
-    var lens = loupe.querySelector(".lens");
-    var view = lens.querySelector(".lens-view");
-    var copy = view.querySelector(".fine-print");
-    var tag = document.getElementById("lens-tag");
-    var tagTier = tag.querySelector(".lens-tag-tier");
-    var tagNote = tag.querySelector(".lens-tag-note");
-    var side = document.querySelector(".lens-side");
-    var controls = document.querySelector(".lens-controls");
-
-    var width = 0, height = 0, radius = 0;
-    var clauses = [], flags = [], flagIndex = -1;
-    var pos = { x: 0, y: 0 };
-    var queued = false, glide = null, shown = null;
-
-    function measure() {
-      width = base.offsetWidth;
-      height = base.offsetHeight;
-      radius = lens.offsetWidth / 2;
-      copy.style.width = width + "px";
-      var origin = loupe.getBoundingClientRect();
-      clauses = toArray(base.querySelectorAll(".fp-clause")).map(function (el) {
-        return { el: el, top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight };
-      });
-      flags = clauses.filter(function (c) { return c.el.dataset.tier !== "none"; }).map(function (c) {
-        // Aim at the first matched phrase: that is what the lens should show.
-        var mark = c.el.querySelector("mark.hit");
-        var box = (mark || c.el).getClientRects()[0];
-        return {
-          clause: c,
-          x: box.left - origin.left + box.width / 2,
-          y: box.top - origin.top + box.height / 2,
-        };
-      });
-    }
-
-    function render() {
-      queued = false;
-      lens.style.transform = "translate(" + (pos.x - radius) + "px," + (pos.y - radius) + "px)";
-      view.style.transform =
-        "translate(" + (radius - pos.x * ZOOM) + "px," + (radius - pos.y * ZOOM) + "px) scale(" + ZOOM + ")";
-      showClauseAt(pos.y);
-    }
-
-    function moveTo(x, y) {
-      pos.x = clamp(x, 0, width);
-      pos.y = clamp(y, 0, height);
-      if (!queued) {
-        queued = true;
-        requestAnimationFrame(render);
-      }
-    }
-
-    function stopGlide() {
-      if (glide) cancelAnimationFrame(glide);
-      glide = null;
-    }
-
-    function glideTo(x, y, duration) {
-      stopGlide();
-      if (reducedMotion.matches || !duration) return moveTo(x, y);
-      var fromX = pos.x, fromY = pos.y, start = null;
-      function frame(now) {
-        if (start === null) start = now;
-        var p = Math.min(1, (now - start) / duration);
-        var eased = 1 - Math.pow(1 - p, 3);
-        pos.x = fromX + (x - fromX) * eased;
-        pos.y = fromY + (y - fromY) * eased;
-        render();
-        glide = p < 1 ? requestAnimationFrame(frame) : null;
-      }
-      glide = requestAnimationFrame(frame);
-    }
-
-    // The margin tag names the clause under the lens and sits level with it.
-    function showClauseAt(y) {
-      var hit = null;
-      for (var i = 0; i < clauses.length; i++) {
-        if (y >= clauses[i].top && y < clauses[i].bottom) { hit = clauses[i]; break; }
-      }
-      if (!hit || hit === shown) return;
-      shown = hit;
-      var d = hit.el.dataset;
-      tag.className = "lens-tag tier-" + d.tier;
-      tagTier.textContent = d.tier === "none" ? "" : d.tierLabel;
-      tagNote.textContent = d.tier === "none" ? "No watched phrases in this clause." : d.note;
-      var room = side.offsetHeight - controls.offsetHeight - tag.offsetHeight - 16;
-      tag.style.setProperty("--tag-y", clamp(hit.top, 0, Math.max(0, room)) + "px");
-    }
-
-    function stepFlag(dir) {
-      if (!flags.length) return;
-      if (flagIndex < 0) {
-        // Continue from wherever the lens is: k is the last flag at or above it.
-        var k = -1;
-        for (var i = 0; i < flags.length; i++) if (flags[i].y <= pos.y + 1) k = i;
-        flagIndex = dir > 0 ? k : k + 1;
-      }
-      flagIndex = (flagIndex + dir + flags.length) % flags.length;
-      glideTo(flags[flagIndex].x, flags[flagIndex].y, STEP_MS);
-    }
-
-    loupe.addEventListener("pointermove", function (event) {
-      if (event.pointerType === "touch") return; // touch scrolls the page; tap places the lens
-      var origin = loupe.getBoundingClientRect();
-      stopGlide();
-      flagIndex = -1;
-      loupe.classList.add("is-tracking");
-      moveTo(event.clientX - origin.left, event.clientY - origin.top);
-    });
-    loupe.addEventListener("pointerleave", function () {
-      loupe.classList.remove("is-tracking");
-    });
-    loupe.addEventListener("pointerdown", function (event) {
-      if (event.pointerType !== "touch") return;
-      var origin = loupe.getBoundingClientRect();
-      flagIndex = -1;
-      glideTo(event.clientX - origin.left, event.clientY - origin.top, STEP_MS);
-    });
-    loupe.addEventListener("keydown", function (event) {
-      var dx = { ArrowLeft: -1, ArrowRight: 1 }[event.key] || 0;
-      var dy = { ArrowUp: -1, ArrowDown: 1 }[event.key] || 0;
-      if (!dx && !dy) return;
-      event.preventDefault();
-      stopGlide();
-      flagIndex = -1;
-      moveTo(pos.x + dx * KEY_STEP, pos.y + dy * KEY_STEP);
-    });
-    toArray(document.querySelectorAll("[data-lens-step]")).forEach(function (button) {
-      button.addEventListener("click", function () { stepFlag(Number(button.dataset.lensStep)); });
-    });
-
-    if ("ResizeObserver" in window) {
-      new ResizeObserver(function () {
-        measure();
-        shown = null;
-        moveTo(pos.x, pos.y);
-      }).observe(loupe);
-    }
-
-    measure();
-    // Park on automatic renewal: a flag everyone recognises, and high enough on the sheet to be in view.
-    var park = flags.filter(function (f) { return /automatic renewal/i.test(f.clause.el.dataset.note); })[0] || flags[0];
-    if (!park) return;
-    flagIndex = flags.indexOf(park);
-    if (reducedMotion.matches) {
-      moveTo(park.x, park.y);
-    } else {
-      // One pass on load: the lens reads down from the title to the flag.
-      moveTo(width * 0.3, 0);
-      setTimeout(function () {
-        if (!loupe.classList.contains("is-tracking")) glideTo(park.x, park.y, FIRST_PASS_MS);
-      }, 300);
-    }
-  }
-
   // ---------- Upload ----------
 
   var loading = document.getElementById("loading");
+  var uploadError = document.getElementById("upload-error");
+  // The upload form needs exactly one of a file or pasted text; say so here instead of a round trip.
+  function uploadProblem(form) {
+    var file = form.querySelector("input[type=file]");
+    var area = form.querySelector("textarea[name=text]");
+    var hasFile = Boolean(file && file.files && file.files.length);
+    var hasText = Boolean(area && area.value.trim());
+    if (!hasFile && !hasText) return "Choose a file or paste your policy text.";
+    if (hasFile && hasText) return "Choose a file or paste text, not both. Clear one to continue.";
+    return "";
+  }
+  var uploadForm = document.getElementById("upload-form");
+  if (uploadForm && uploadError) {
+    ["input", "change"].forEach(function (type) {
+      uploadForm.addEventListener(type, function () { uploadError.textContent = ""; });
+    });
+  }
   toArray(document.querySelectorAll(".js-analyze-form")).forEach(function (form) {
-    form.addEventListener("submit", function () {
+    form.addEventListener("submit", function (event) {
+      if (form.id === "upload-form" && uploadError) {
+        var problem = uploadProblem(form);
+        if (problem) {
+          event.preventDefault();
+          uploadError.textContent = problem;
+          var area = form.querySelector("textarea[name=text]");
+          if (area) area.focus();
+          return;
+        }
+      }
       // The browser keeps this page up until the results arrive. Fast reviews
-      // show nothing; slower ones show a skeleton of the results page after 100ms.
+      // show nothing; slower ones show a skeleton of the results page after 300ms.
       toArray(document.querySelectorAll(".js-analyze-form button[type=submit]")).forEach(function (b) {
         b.disabled = true;
       });
@@ -362,7 +87,7 @@
         main.setAttribute("aria-busy", "true");
         loading.hidden = false;
         if (form.id === "upload-form") loading.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
-      }, 100);
+      }, 300);
     });
   });
 
@@ -605,20 +330,128 @@
     layout();
   }
 
-  // ---------- Results: print summary and JSON export ----------
+  // ---------- Results: copy wording ----------
+
+  var copyStatus = document.getElementById("copy-status");
+  function announceCopy(message) {
+    if (!copyStatus) return;
+    copyStatus.textContent = "";
+    setTimeout(function () { copyStatus.textContent = message; }, 50);
+  }
+  function selectText(el) {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  toArray(document.querySelectorAll(".copy-button[data-copy]")).forEach(function (button) {
+    var source = document.getElementById(button.dataset.copy);
+    if (!source) return;
+    button.hidden = false;
+    button.addEventListener("click", function () {
+      var done = function () {
+        button.textContent = "Copied";
+        announceCopy("Wording copied.");
+        setTimeout(function () { button.textContent = "Copy wording"; }, 2000);
+      };
+      // Without clipboard access (an insecure origin or a blocked permission), select the text instead.
+      var fallback = function () {
+        selectText(source);
+        announceCopy("Wording selected. Press Control C, or Command C on a Mac, to copy it.");
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(source.textContent.trim()).then(done, fallback);
+      } else {
+        fallback();
+      }
+    });
+  });
+
+  // ---------- Results: print, JSON export and draft fixes ----------
 
   var printButton = document.getElementById("print-summary");
   if (printButton) printButton.addEventListener("click", function () { window.print(); });
 
-  var download = document.getElementById("download-json");
+  function baseName(source) { return source.replace(/\.[^.]+$/, "") || "policy"; }
+  function saveFile(name, body, type) {
+    var blob = new Blob([body], { type: type });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+  function citation(rule) {
+    var joiner = /^[sr]\./.test(rule.section) ? " " : ", ";
+    return rule.law_name + joiner + rule.section;
+  }
+
+  // The policy with a note after each clause that has a possible issue, then the missing clauses
+  // with template wording. Nothing in the policy is rewritten: a keyword match can't know what
+  // else a clause does.
+  // "Subscription trap" reads "subscription trap" mid-sentence; "SaaS billing" keeps its capitals.
+  function midSentence(title) { return /[A-Z]/.test(title.split(" ")[0].slice(1)) ? title : title.charAt(0).toLowerCase() + title.slice(1); }
+  function draftFixes(result) {
+    var rules = {};
+    result.rules.forEach(function (r) { rules[r.rule_id] = r; });
+    var notes = {};
+    result.findings.forEach(function (f) {
+      if (f.verdict === "compliant") return;
+      (notes[f.clause_index] = notes[f.clause_index] || []).push(f);
+    });
+    var out = [
+      "# Draft fixes: " + result.source,
+      "",
+      "LegalLens " + (result.mode === "full" ? "audit" : "keyword check") + ", rulebook " + result.rulebook_version +
+        ", generated " + result.generated_at.slice(0, 10) + ".",
+      "Review every suggestion before using it. " + result.disclaimer,
+      "",
+      "## Your policy, with notes",
+      "",
+    ];
+    var pos = 0;
+    result.clauses.slice().sort(function (a, b) { return a.start - b.start; }).forEach(function (c) {
+      var between = result.text.slice(pos, c.start).trim();
+      if (between) out.push(between, "");
+      out.push(result.text.slice(c.start, c.end).trim(), "");
+      (notes[c.index] || []).forEach(function (f) {
+        var rule = rules[f.rule_id];
+        out.push("> **LegalLens: " + (f.verdict === "unclear" ? "possible issue" : "not met") + " under " +
+          citation(rule) + ", " + midSentence(rule.title) + ".** Consider: " + (f.suggested_rewrite || f.how_to_fix), "");
+      });
+      pos = c.end;
+    });
+    var tail = result.text.slice(pos).trim();
+    if (tail) out.push(tail, "");
+    if (result.missing.length) {
+      out.push("## Clauses to add", "", "Adapt this wording and replace each [placeholder].", "");
+      result.missing.forEach(function (m) {
+        out.push("### " + m.title + " (" + citation(m) + ", " + m.severity + ")", "", m.how_to_fix, "");
+      });
+    }
+    return out.join("\n");
+  }
+
   var data = document.getElementById("result-data");
+  var fixesButton = document.getElementById("download-fixes");
+  if (fixesButton && data) {
+    fixesButton.hidden = false;
+    document.getElementById("fixes-hint").hidden = false;
+    fixesButton.addEventListener("click", function () {
+      var result = JSON.parse(data.textContent);
+      saveFile(baseName(result.source) + ".draft-fixes.md", draftFixes(result), "text/markdown");
+    });
+  }
+
+  var download = document.getElementById("download-json");
   if (download && data) {
     download.addEventListener("click", function () {
       var result = JSON.parse(data.textContent);
       var blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
       var link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = result.source.replace(/\.[^.]+$/, "") + ".clauses.json";
+      link.download = baseName(result.source) + ".audit.json";
       link.click();
       URL.revokeObjectURL(link.href);
     });

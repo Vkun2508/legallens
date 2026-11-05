@@ -1,0 +1,366 @@
+/* LegalLens homepage: "Case file: Kettle". The sample policy's real audit played as a scan:
+   the sheet tilts in under a beam, clauses with possible issues lift off with their section,
+   missing clauses open as slots, then the camera flies through the clauses and the findings stack
+   beside the score. Dark only. Tokens are local to this page; app.css keeps the audit page. */
+
+
+html.landing, html.landing[data-theme] {
+  color-scheme: dark;
+  --scan-ground: #0A0B0D; --scan-surface: #15171A; --scan-ink: #EBEBE6; --scan-muted: #A5A7A3;
+  --scan-paper: #EFEFEC; --scan-paper-ink: #1C1C1A; --scan-paper-muted: #5E5D58;
+  --scan-beam: #FFF1D0;
+  --scan-crit: #FF6A5E; --scan-major: #F2A93B;
+  --scan-crit-paper: #B3261E; --scan-crit-tint: #F9D7D2; --scan-major-paper: #8A5A0F; --scan-major-tint: #F6E5C2;
+  --scan-m: clamp(16px, 2.2vw, 32px);
+  --scan-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --scan-card-w: clamp(300px, 29vw, 460px);
+  --scan-display: "Bricolage Grotesque", "Arial Narrow", sans-serif;
+  --scan-text: "Switzer", system-ui, sans-serif;
+  background: var(--scan-ground);
+  scrollbar-color: #3A3C40 var(--scan-ground);
+}
+html.landing body { background: var(--scan-ground); }
+html.landing ::selection { background: var(--scan-beam); color: var(--scan-ground); }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+main.landing-main { padding: 0; }
+
+/* ---------- Navigation ---------- */
+.scan-nav { position: fixed; z-index: 20; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px max(var(--scan-m), env(safe-area-inset-right)) 14px max(var(--scan-m), env(safe-area-inset-left)); font: 400 15px/1.2 var(--scan-text); color: var(--scan-ink); background: transparent; transition: background-color 200ms var(--scan-ease); }
+/* Over the hero the bar is see-through, so the scene isn't sliced; past it, it takes the ground. */
+.scan-nav.is-solid, html:not(.js) .scan-nav { background: var(--scan-ground); }
+.scan-nav .scan-mark { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--scan-ink); text-decoration: none;
+  font: 700 20px/1 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75; letter-spacing: -0.01em; text-transform: uppercase; }
+.scan-nav .scan-mark svg { width: 22px; height: 22px; }
+.scan-nav ul { display: flex; gap: clamp(14px, 2.6vw, 36px); list-style: none; padding: 0; margin: 0; }
+.scan-nav a, .scan-navlink { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--scan-muted);
+  font: inherit; text-decoration: none; cursor: pointer; transition: color 150ms var(--scan-ease); }
+.scan-nav a:hover, .scan-navlink:hover { color: var(--scan-ink); }
+.scan-nav :focus-visible, .scan :focus-visible { outline: 2px solid var(--scan-beam); outline-offset: 3px; }
+
+/* ---------- The scene ---------- */
+.scan { position: relative; height: 100svh; min-height: 640px; overflow: hidden; color: var(--scan-ink); font: 400 17px/1.5 var(--scan-text);
+  -webkit-font-smoothing: antialiased; font-variant-numeric: lining-nums; }
+.scan-stage-wrap { position: absolute; inset: 0; }
+.scan-dither { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scan-stage { position: absolute; inset: 0; perspective: 1600px; perspective-origin: 64% 42%; }
+.scan-world { position: absolute; left: 64%; top: 44%; width: 0; height: 0; transform-style: preserve-3d; }
+.scan-group, .scan-drift { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.scan-paper { position: absolute; left: 0; top: 0; background: var(--scan-paper); box-shadow: 0 60px 120px rgb(0 0 0 / 0.55), 0 12px 30px rgb(0 0 0 / 0.35); } /* taste-skill-ignore: the sheet floats (contract LIFTED: shadow) */
+.scan-paper::after { content: ""; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+.scan-card { position: absolute; left: 0; top: 0; width: var(--scan-card-w); padding: 10px 14px; color: var(--scan-paper-ink);
+  font-size: clamp(13px, 0.98vw, 15px); line-height: 1.5; transform-style: preserve-3d; }
+.scan-card, .scan-card .scan-bg, .scan-card .scan-tx, .scan-card .scan-bgl, .scan-slot, .scan-box { backface-visibility: hidden; }
+.scan-card h3 { font: 600 1em/1.3 var(--scan-text); margin: 0 0 2px; }
+.scan-card p { margin: 0; }
+.scan-card.scan-title h3 { font: 700 1.5em/1 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 6px; }
+.scan-card.scan-title p { color: var(--scan-paper-muted); }
+.scan-bg, .scan-bgl { position: absolute; inset: 0; background: var(--scan-paper); opacity: 0; }
+/* Unread text is a solid grey that still reads (4.9:1 on the paper); the beam turns it to full ink. */
+.scan-tx { position: relative; color: #6B6B68; }
+.scan-card.scan-title .scan-tx { color: var(--scan-paper-ink); }
+.scan-card mark { background: none; color: inherit; transition: background-color 300ms var(--scan-ease), color 300ms var(--scan-ease); }
+.scan-card.is-lit mark { text-decoration: underline 2px; text-underline-offset: 2px; }
+.scan-card.is-lit mark.critical { background: var(--scan-crit-tint); color: var(--scan-crit-paper); }
+.scan-card.is-lit mark.major { background: var(--scan-major-tint); color: var(--scan-major-paper); }
+.scan-cast { position: absolute; inset: 6px 10px; background: #000; filter: blur(14px); opacity: 0; transform: translateZ(-1px); }
+
+.scan-tag { position: absolute; left: 14px; bottom: 100%; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; white-space: nowrap;
+  padding: 7px 10px 6px; background: var(--scan-ground); color: var(--scan-ink); font-size: 13px; line-height: 1; opacity: 0; }
+.scan-tag b { font-weight: 600; }
+.scan-tag.critical b { color: var(--scan-crit); } .scan-tag.major b { color: var(--scan-major); }
+
+.scan-slot { position: absolute; left: 0; top: 0; width: var(--scan-card-w); height: 0; transform-style: preserve-3d; }
+.scan-box { position: absolute; left: 10px; right: 10px; top: 6px; height: 78px; border: 2px dashed currentColor; padding: 10px 12px;
+  font-size: clamp(13px, 0.98vw, 15px); line-height: 1.35; opacity: 0; transform-origin: 50% 0; }
+.scan-slot.critical { color: var(--scan-crit-paper); } .scan-slot.major { color: var(--scan-major-paper); } .scan-slot.minor { color: var(--scan-paper-muted); }
+.scan-box b { display: block; font-weight: 600; }
+.scan-box span { color: var(--scan-paper-ink); }
+.scan-box small { display: block; font-size: max(13px, 0.86em); color: var(--scan-paper-muted); margin-top: 2px; }
+.scan-boxbg { position: absolute; inset: 0; background: var(--scan-paper); opacity: 0; z-index: -1; }
+
+/* The beam sits in the sheet's plane and stays put; the page drifts up through it. */
+.scan-beam { position: absolute; left: 0; top: 0; height: 2px; background: var(--scan-beam); opacity: 0; }
+.scan-lede-short { display: none; }
+
+/* ---------- The read's verdicts ---------- */
+.scan-verdicts { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
+.scan-verdict { position: absolute; opacity: 0; visibility: hidden; }
+/* The first close-up sits beside its clause; "Not found" takes the whole frame above the empty slot. */
+.scan-verdict[data-v="1"] { left: var(--scan-m); top: 50%; width: min(38vw, 560px); translate: 0 -50%; }
+.scan-verdict[data-v="2"] { left: var(--scan-m); right: var(--scan-m); top: clamp(80px, 10vh, 112px); bottom: 104px;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; }
+.scan-verdict[data-v="2"] .v-tier { font-size: clamp(110px, 15.5vw, 280px); }
+.scan-verdict[data-v="2"] .v-foot { max-width: 44em; }
+.scan-verdict[data-v="2"] .v-title, .scan-verdict[data-v="2"] .v-quote { max-width: none; }
+.scan-verdict p { margin: 0; }
+.v-tier { font: 700 clamp(64px, 8.4vw, 150px)/0.84 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75, "opsz" 96; letter-spacing: -0.025em; text-transform: uppercase; }
+.v-tier.critical { color: var(--scan-crit); } .v-tier.major { color: var(--scan-major); } .v-tier.minor { color: var(--scan-muted); }
+.v-title { margin-top: 18px !important; font: 500 clamp(22px, 1.9vw, 30px)/1.2 var(--scan-text); color: var(--scan-ink); max-width: 20em; }
+.v-cite { margin-top: 10px !important; font-size: 15px; color: var(--scan-muted); }
+.v-quote { margin-top: 16px !important; font-size: clamp(16px, 1.2vw, 18px); color: var(--scan-ink); max-width: 30em; }
+
+/* ---------- Copy ---------- */
+.scan-copy { position: absolute; z-index: 5; left: var(--scan-m); top: clamp(88px, 15vh, 150px); width: min(46vw, 700px); }
+.scan h1 { margin: 0; font: 700 clamp(48px, 6.6vw, 120px)/0.88 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75, "opsz" 96;
+  letter-spacing: -0.025em; text-transform: uppercase; color: var(--scan-ink); }
+.scan-line { display: block; overflow: hidden; padding-bottom: 0.04em; }
+.scan-line > span { display: block; }
+.scan-lede { margin: clamp(20px, 3.2vh, 36px) 0 0; font-size: clamp(17px, 1.3vw, 19px); max-width: 30em; }
+.scan-form { margin-top: clamp(18px, 3vh, 28px); max-width: 540px; }
+.scan-form label { display: block; font-size: 14px; color: var(--scan-muted); margin-bottom: 8px; }
+.scan-row { display: flex; background: var(--scan-surface); }
+.scan-row input { flex: 1; min-width: 0; height: 56px; border: 0; border-radius: 0; background: transparent; color: var(--scan-ink); padding: 0 16px; font: 400 17px var(--scan-text); }
+.scan-row input::placeholder { color: #7D807C; }
+.scan-row input:focus { outline: none; }
+.scan-row input:-webkit-autofill { -webkit-text-fill-color: var(--scan-ink); box-shadow: 0 0 0 100px var(--scan-surface) inset; } /* taste-skill-ignore: repaints the browser's autofill colour, not a shadow */
+.scan-row:focus-within { outline: 2px solid var(--scan-beam); outline-offset: -2px; }
+.scan-row button, .scan-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; border: 0; border-radius: 0; padding: 0 22px;
+  background: var(--scan-paper); color: var(--scan-ground); font: 600 17px var(--scan-text); text-decoration: none; cursor: pointer;
+  transition: background-color 150ms var(--scan-ease), transform 100ms var(--scan-ease); }
+.scan-row button:hover, .scan-btn:hover { background: #FFFFFF; }
+.scan-row button:active, .scan-btn:active { transform: scale(0.97); }
+.scan-row button[aria-busy="true"] { cursor: progress; background: #D9D8D2; }
+.scan-btn-quiet { background: var(--scan-surface); color: var(--scan-ink); }
+.scan-btn-quiet:hover { background: #22252A; }
+.scan-alt { margin: 12px 0 0; font-size: 14px; color: var(--scan-muted); }
+.scan-alt a { color: var(--scan-ink); text-underline-offset: 3px; }
+.scan-error { margin: 0 0 20px; padding: 12px 14px; background: #2A1513; color: var(--scan-ink); font-size: 15px; border-left: 3px solid var(--scan-crit); }
+
+/* ---------- Case-file HUD ---------- */
+.scan-hud { position: absolute; z-index: 6; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(220px, 2fr) minmax(96px, 0.8fr) minmax(96px, 0.8fr) minmax(150px, 1fr) minmax(200px, 1.3fr); gap: 24px; align-items: end;
+  padding: 16px max(var(--scan-m), env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(var(--scan-m), env(safe-area-inset-left));
+  background: var(--scan-ground); font-size: 13px; line-height: 1.35; color: var(--scan-muted); font-variant-numeric: tabular-nums lining-nums; }
+.scan-hud b { display: block; color: var(--scan-ink); font-weight: 500; white-space: nowrap; }
+.h-bar { height: 2px; background: #2A2C30; margin-top: 8px; }
+.h-bar i { display: block; height: 100%; background: var(--scan-beam); transform-origin: 0 50%; }
+.h-crit b { color: var(--scan-crit); } .h-miss b { color: var(--scan-major); }
+
+/* ---------- The result, at the end of the scan ---------- */
+.scan-result { position: absolute; z-index: 5; left: var(--scan-m); top: clamp(96px, 15vh, 150px); width: min(40vw, 600px); opacity: 0; visibility: hidden; }
+.scan-score { margin: 0; font: 700 clamp(88px, 12vw, 200px)/0.8 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75; letter-spacing: -0.03em; font-variant-numeric: tabular-nums lining-nums; }
+.scan-score small { font-size: 0.32em; letter-spacing: 0; color: var(--scan-muted); margin-left: 0.1em; }
+.scan-result > p:not(.scan-score):not(.scan-fine) { margin: 18px 0 0; font-size: clamp(17px, 1.35vw, 20px); max-width: 26em; }
+.scan-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+.scan-actions .scan-btn { min-height: 52px; }
+.scan-fine { margin: 14px 0 0; font-size: 14px; color: var(--scan-muted); }
+
+/* ---------- Without JavaScript: the finished scan, laid flat on a tilted sheet ---------- */
+html:not(.js) .scan-stage { perspective: 1400px; }
+html:not(.js) .scan-drift { position: absolute; left: -230px; top: -280px; width: var(--scan-card-w); height: auto; padding: 24px 12px; background: var(--scan-paper);
+  transform: rotateX(38deg) rotateZ(-12deg); transform-style: flat; box-shadow: 0 60px 120px rgb(0 0 0 / 0.55); } /* taste-skill-ignore: the sheet floats (contract LIFTED: shadow) */
+html:not(.js) .scan-card, html:not(.js) .scan-slot { position: relative; width: auto; }
+html:not(.js) .scan-slot { height: 92px; }
+html:not(.js) .scan-paper, html:not(.js) .scan-beam, html:not(.js) .scan-tag, html:not(.js) .scan-cast { display: none; }
+html:not(.js) .scan-tx { color: var(--scan-paper-ink); }
+html:not(.js) .scan-box { opacity: 1; }
+html:not(.js) .scan-card.is-flag mark.critical { background: var(--scan-crit-tint); color: var(--scan-crit-paper); }
+html:not(.js) .scan-card.is-flag mark.major { background: var(--scan-major-tint); color: var(--scan-major-paper); }
+
+/* ---------- Phone ---------- */
+@media (max-width: 1023px) {
+  html.landing, html.landing[data-theme] { --scan-card-w: min(78vw, 330px); }
+  .scan-nav li:not(:last-child) { display: none; }
+  .scan { height: auto; min-height: 0; overflow: visible; display: flex; flex-direction: column; }
+  .scan-copy { order: -1; position: relative; left: auto; top: auto; width: auto; padding: 96px var(--scan-m) 0; }
+  .scan h1 { font-size: clamp(38px, 13.2vw, 64px); }
+  .scan-stage-wrap { position: relative; height: 78svh; overflow: hidden; margin-top: 24px; }
+  .scan-stage { perspective: 1100px; perspective-origin: 50% 40%; }
+  .scan-world { left: 50%; top: 40%; }
+  .scan-hud { position: relative; grid-template-columns: 1fr 1fr; gap: 16px 20px; padding-top: 20px; }
+  .scan-hud .h-doc, .scan-hud .h-rule { display: none; }
+  .scan-hud b { white-space: normal; }
+  .scan-lede { display: none; }
+  .scan-lede.scan-lede-short { display: block; }
+  .scan-verdicts { left: var(--scan-m); right: var(--scan-m); top: auto; bottom: 0; }
+  .scan-verdict, .scan-verdict[data-v="1"], .scan-verdict[data-v="2"] { left: 0; right: 0; top: auto; bottom: 0; width: auto; translate: none;
+    display: block; text-align: left; padding: 14px 0 16px; background: var(--scan-ground); }
+  .scan-verdict[data-v="2"] .v-tier { font-size: clamp(40px, 12vw, 60px); }
+  .scan-nav { background: var(--scan-ground); }
+  .v-tier { font-size: clamp(40px, 12vw, 60px); }
+  .v-title { margin-top: 10px !important; font-size: 18px; }
+  .v-quote { display: none; }
+  .scan-actions { flex-direction: column; }
+  .scan-actions .scan-btn { width: 100%; }
+  .scan-stage-wrap { height: 72svh; margin-top: 12px; }
+  .scan-result { position: relative; top: auto; left: auto; transform: none; width: auto; padding: 32px var(--scan-m) 8px; opacity: 1; visibility: visible; background: var(--scan-ground); }
+  html:not(.js) .scan-drift { left: -165px; top: -260px; }
+}
+@media (min-width: 1024px) and (max-height: 840px) {
+  .scan-world { top: 50%; }
+  .scan-copy { top: 84px; }
+  .scan h1 { font-size: clamp(44px, 6vw, 96px); }
+}
+
+/* ---------- Reduced motion: every state still changes, instantly ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .scan-card mark, .scan-row button, .scan-btn { transition: none; }
+}
+/* Where the scan doesn't play (reduced motion, or no JS) the hero rests on the read sheet beside the
+   headline; the score is in the case-file bar, and the sample report is in the navigation. */
+@media (min-width: 1024px) and (prefers-reduced-motion: reduce) { .scan-result { display: none; } }
+@media (min-width: 1024px) { html:not(.js) .scan-result { display: none; } }
+@media print { .scan { display: none; } }
+
+/* =================================================================================================
+   The rest of the page, in the same world: each section composed differently from its neighbours.
+   ================================================================================================= */
+.landing-main > section:not(.scan), .ll-footer { color: var(--scan-ink); font: 400 17px/1.55 var(--scan-text); -webkit-font-smoothing: antialiased;
+  padding-left: max(var(--scan-m), env(safe-area-inset-left)); padding-right: max(var(--scan-m), env(safe-area-inset-right)); }
+.landing-main > section:not(.scan) h2 { margin: 0; font: 700 clamp(40px, 5vw, 88px)/0.9 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75, "opsz" 96;
+  letter-spacing: -0.02em; text-transform: uppercase; color: inherit; text-wrap: balance; }
+.landing-main > section:not(.scan) p { margin: 0; }
+.landing-main a:not(.scan-btn) { color: var(--scan-ink); text-underline-offset: 3px; }
+
+/* How it works: the steps beside one real clause, marked up the way the report does it. */
+.ll-how { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; align-items: center; padding-top: clamp(120px, 16vh, 200px); padding-bottom: clamp(80px, 10vh, 140px); }
+.ll-how-copy { grid-column: 1 / span 5; }
+.ll-steps { list-style: none; margin: 40px 0 0; padding: 0; display: grid; gap: 28px; }
+.ll-steps b { display: block; font: 700 clamp(30px, 2.6vw, 44px)/1 var(--scan-display); font-stretch: 75%; font-variation-settings: "wdth" 75; text-transform: uppercase; color: var(--scan-beam); }
+.ll-steps p { margin-top: 8px !important; max-width: 30em; }
+.ll-redline { grid-column: 7 / span 6; margin: 0; }
+.ll-redline figcaption { font-size: 14px; color: var(--scan-muted); margin-bottom: 14px; }
+.ll-sheet { background: var(--scan-paper); color: var(--scan-paper-ink); padding: clamp(24px, 3vw, 44px); transform: rotate(-1.2deg);
+  box-shadow: 0 40px 90px rgb(0 0 0 / 0.5), 0 8px 24px rgb(0 0 0 / 0.3); } /* taste-skill-ignore: the sheet floats (contract LIFTED: shadow) */
+.ll-sheet-head { font-weight: 600; font-size: 20px; }
+.ll-sheet-text { margin-top: 8px !important; font-size: clamp(17px, 1.35vw, 21px); line-height: 1.6; }
+.ll-sheet del { color: var(--scan-crit-paper); text-decoration: line-through 2px; }
+.ll-sheet-flag { margin-top: 18px !important; font-size: 14px; color: var(--scan-paper-muted); }
+:is(.ll-sheet, .ll-rule-card) .tier-badge { color: var(--scan-crit-paper); font-weight: 600; }
+:is(.ll-sheet, .ll-rule-card) .tier-badge.tier-medium { color: var(--scan-major-paper); }
+:is(.ll-sheet, .ll-rule-card) .tier-badge::before { background: currentColor; }
+:is(.ll-sheet, .ll-rule-card) .tier-qualifier { color: var(--scan-paper-muted); font-weight: 400; }
+.ll-sheet-fix { margin-top: 22px !important; padding-left: 16px; border-left: 3px solid var(--scan-paper-ink); }
+.ll-sheet-fix span { display: block; font-size: 14px; font-weight: 600; color: var(--scan-paper-muted); margin-bottom: 4px; }
+.ll-sheet-fix ins { text-decoration: none; font-size: clamp(17px, 1.35vw, 21px); line-height: 1.6; }
+
+/* The marking beat: the phrase turns red and is struck, then the flag and the wording arrive. */
+.ll-redline.is-armed del { transition: color 500ms var(--scan-ease) 200ms, text-decoration-color 500ms var(--scan-ease) 450ms; }
+.ll-redline.is-armed:not(.is-read) del { color: inherit; text-decoration-color: transparent; }
+.ll-redline.is-armed .ll-sheet-flag, .ll-redline.is-armed .ll-sheet-fix { transition: opacity 700ms var(--scan-ease), transform 700ms var(--scan-ease); }
+.ll-redline.is-armed .ll-sheet-flag { transition-delay: 900ms; }
+.ll-redline.is-armed .ll-sheet-fix { transition-delay: 1150ms; }
+.ll-redline.is-armed:not(.is-read) .ll-sheet-flag, .ll-redline.is-armed:not(.is-read) .ll-sheet-fix { opacity: 0; transform: translateY(10px); }
+
+/* One rule from the rulebook: a flat index card under the statement (the redline above is tilted). */
+.ll-rule { margin: 56px 0 0; max-width: 460px; }
+.ll-rule figcaption { font-size: 14px; color: var(--scan-muted); margin-bottom: 14px; }
+.ll-rule-card { background: var(--scan-paper); color: var(--scan-paper-ink); padding: clamp(22px, 2.4vw, 32px); }
+.ll-rule-meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; font-size: 14px; }
+.ll-rule-id { color: var(--scan-paper-muted); }
+.ll-rule-title { margin-top: 14px !important; font: 600 20px/1.3 var(--scan-text); text-wrap: balance; }
+.ll-rule-cite { margin-top: 6px !important; font-size: 14px; color: var(--scan-paper-muted); }
+.ll-rule-quote { margin: 22px 0 0; padding: 0; font-size: 16px; line-height: 1.55; }
+.ll-rule-quote footer { margin-top: 6px; font-size: 14px; color: var(--scan-paper-muted); }
+.ll-rule .ll-sheet-fix ins { font-size: 16px; }
+
+/* The deadline: a full-bleed paper band, the one change of field on the page. */
+.ll-deadline { background: var(--scan-paper); color: var(--scan-paper-ink) !important; display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; align-items: end;
+  padding-top: clamp(72px, 10vh, 120px); padding-bottom: clamp(72px, 10vh, 120px); }
+.ll-deadline h2 { grid-column: 1 / span 7; }
+.ll-days { display: block; font-size: clamp(88px, 13vw, 230px); line-height: 0.82; font-variant-numeric: lining-nums tabular-nums; }
+.ll-until { display: block; margin-top: 14px; font-size: clamp(28px, 2.6vw, 44px); color: var(--scan-paper-muted); }
+.ll-deadline p { grid-column: 9 / span 4; font-size: clamp(17px, 1.4vw, 20px); }
+
+/* What it checks: the statement, then the real table pushed right. */
+.ll-checks { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; padding-top: clamp(120px, 16vh, 200px); }
+.ll-checks-head { grid-column: 1 / span 4; }
+.ll-checks-head > p { margin-top: 20px !important; color: var(--scan-muted); max-width: 26em; }
+.ll-table { grid-column: 6 / span 7; overflow-x: auto; align-self: start; position: sticky; top: 112px; } /* stays beside the rule card as it scrolls */
+.ll-table table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.ll-table th, .ll-table td { text-align: left; vertical-align: top; padding: 16px 16px 16px 0; border-bottom: 1px solid #2A2C30; }
+.ll-table thead th { font-size: 14px; font-weight: 500; color: var(--scan-muted); padding-top: 0; }
+.ll-table tbody th { font-weight: 600; width: 36%; }
+.ll-table tbody th .ll-sub { font-weight: 400; }
+.ll-table .num { width: 150px; }
+.ll-table .num .ll-sub { white-space: nowrap; }
+.ll-unit { display: none; } /* the column header says "Rules" until the table folds on phones */
+.ll-table .num { text-align: right; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+.ll-table tbody .num { font: 700 32px/1 var(--scan-display); font-stretch: 75%; }
+.ll-sub { display: block; margin-top: 6px; font: 400 14px/1.35 var(--scan-text); color: var(--scan-muted); white-space: normal; }
+
+/* Pricing: one sentence, three priced lines. */
+.ll-pricing { padding-top: clamp(120px, 16vh, 200px); }
+.ll-pricing h2 { font-size: clamp(56px, 9vw, 160px) !important; }
+.ll-plans { margin: 48px 0 0; display: grid; gap: 4px; }
+.ll-plan { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; align-items: baseline; padding: 22px 24px; background: var(--scan-surface); }
+.ll-plan.is-now { background: var(--scan-paper); color: var(--scan-paper-ink); }
+.ll-plan dt { grid-column: 1 / span 4; font: 700 clamp(30px, 2.6vw, 44px)/1 var(--scan-display); font-stretch: 75%; text-transform: uppercase; }
+.ll-plan dd { margin: 0; }
+.ll-plan-what { grid-column: 5 / span 5; }
+.ll-plan-price { grid-column: 10 / span 3; text-align: right; font: 700 clamp(30px, 2.6vw, 44px)/1 var(--scan-display); font-stretch: 75%; font-variant-numeric: tabular-nums lining-nums; }
+.ll-plan-price small { font-size: 0.5em; color: inherit; opacity: 0.8; } /* same face as the price: one headline, one typeface */
+.ll-pricing-foot { margin-top: 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+.ll-pricing-foot p { color: var(--scan-muted); max-width: 40em; }
+
+/* Audit a policy: the working form, beside its heading. */
+.ll-audit { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; padding-top: clamp(120px, 16vh, 200px); }
+.ll-audit-head { grid-column: 1 / span 4; }
+.ll-audit-head > p { margin-top: 20px !important; color: var(--scan-muted); max-width: 26em; }
+.ll-audit .upload-form, .ll-audit .loading { grid-column: 6 / span 7; grid-row: 1 / span 2; align-self: start; margin-top: 0; max-width: none; }
+.ll-audit .field-label, .ll-audit legend { color: var(--scan-ink); font-weight: 500; }
+.ll-audit .hint { color: var(--scan-muted); }
+.ll-audit .choice-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.ll-audit .choice-option { background: var(--scan-surface); border-color: transparent; border-radius: 0; color: var(--scan-ink); }
+.ll-audit .choice-option:has(input:checked) { background: var(--scan-paper); color: var(--scan-paper-ink); border-color: var(--scan-paper); }
+.ll-audit .choice-option:has(input:checked) .hint { color: var(--scan-paper-muted); }
+.ll-audit .choice-option input { accent-color: var(--scan-paper-ink); }
+.ll-audit .dropzone { background: var(--scan-surface); border-color: transparent; border-radius: 0; color: var(--scan-ink); }
+.ll-audit .dropzone:hover, .ll-audit .dropzone.is-dragover { border-color: var(--scan-beam); background: #1C1F23; }
+.ll-audit .dropzone-cta { color: var(--scan-beam); }
+.ll-audit .dropzone-icon { color: var(--scan-muted); }
+.ll-audit textarea { background: var(--scan-surface); color: var(--scan-ink); border: 0; border-radius: 0; font: 400 16px/1.6 var(--scan-text); padding: 14px 16px; }
+.ll-audit textarea:focus-visible, .ll-audit .dropzone:has(input:focus-visible) { outline: 2px solid var(--scan-beam); outline-offset: 2px; }
+.ll-audit .button-primary { background: var(--scan-paper); border-color: var(--scan-paper); color: var(--scan-ground); border-radius: 0; min-height: 52px; font: 600 17px var(--scan-text); }
+.ll-audit .button-primary:hover { background: #FFFFFF; border-color: #FFFFFF; }
+.ll-audit .form-error { margin-top: 16px; padding: 12px 14px; background: #2A1513; border-left: 3px solid var(--scan-crit); font-size: 15px; color: var(--scan-ink); }
+.ll-audit .form-error:empty { display: none; }
+.ll-audit .form-error:focus { outline: none; }
+
+/* The draft-fixes excerpt: the downloaded file as a plain sheet, notes set off like Markdown quotes. */
+.ll-file { grid-column: 1 / span 4; grid-row: 2; align-self: start; margin: 56px 0 0; max-width: 460px; }
+.ll-file figcaption { font-size: 14px; color: var(--scan-muted); margin-bottom: 14px; max-width: 34em; }
+.ll-file-sheet { background: var(--scan-paper); color: var(--scan-paper-ink); padding: clamp(22px, 2.4vw, 32px); font-size: 16px; line-height: 1.55; }
+.ll-file-name { margin-bottom: 20px !important; font-size: 14px; color: var(--scan-paper-muted); overflow-wrap: anywhere; }
+.ll-file-head { font-weight: 600; }
+.ll-file-text { margin-top: 4px !important; }
+.ll-file-note { margin: 14px 0 0; padding: 2px 0 2px 14px; border-left: 3px solid var(--scan-major-paper); }
+.ll-file-note b { font-weight: 600; }
+
+/* Questions: large questions, the answers beside them; nothing folds away. */
+.ll-faq { padding-top: clamp(120px, 16vh, 200px); padding-bottom: clamp(120px, 16vh, 200px); }
+.ll-faq dl { margin: 48px 0 0; display: grid; gap: clamp(40px, 6vh, 72px); }
+.ll-faq dl > div { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; }
+.ll-faq dt { grid-column: 1 / span 6; font: 500 clamp(24px, 2.4vw, 38px)/1.12 var(--scan-text); letter-spacing: -0.015em; }
+.ll-faq dd { grid-column: 8 / span 5; margin: 0; color: var(--scan-ink); max-width: 36em; }
+
+/* The footer: the name returns at full width. */
+.ll-footer { container-type: inline-size; padding-top: 40px; padding-bottom: calc(32px + env(safe-area-inset-bottom)); background: var(--scan-ground); }
+.ll-footer-name { margin: 0; font: 700 calc((100vw - 2 * var(--scan-m)) / 3.1)/0.8 var(--scan-display); font-size: calc(100cqw / 3.04); /* fills the measure: the word is 3.0 em wide */ font-stretch: 75%; font-variation-settings: "wdth" 75, "opsz" 96;
+  letter-spacing: -0.03em; text-transform: uppercase; color: #5E605C; white-space: nowrap; } /* 3.1:1, a large-text pass: quiet, but there */
+.ll-footer-notes { margin-top: 28px; display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; font-size: 14px; color: var(--scan-muted); }
+.ll-footer-notes p { margin: 0; grid-column: span 6; max-width: 46em; }
+
+@media (max-width: 1023px) {
+  .ll-how, .ll-deadline, .ll-checks, .ll-audit, .ll-faq dl > div, .ll-plan, .ll-footer-notes { display: block; }
+  .ll-redline { margin-top: 48px; }
+  .ll-rule, .ll-file { margin-top: 40px; max-width: 560px; }
+  .ll-sheet { transform: none; }
+  .ll-deadline p { margin-top: 28px !important; }
+  .ll-table, .ll-audit .upload-form { margin-top: 36px; }
+  /* Folded, the price sits under the plan's name, so the next plan's name never follows a price unit. */
+  .ll-plan { display: flex; flex-direction: column; }
+  .ll-plan-price { order: 1; text-align: left; margin-top: 10px !important; }
+  .ll-plan-what { order: 2; margin-top: 12px !important; }
+  .ll-faq dd { margin-top: 12px; }
+  .ll-footer-notes p + p { margin-top: 12px; }
+  .ll-table { position: static; }
+  .ll-table table, .ll-table thead, .ll-table tbody, .ll-table tr, .ll-table th, .ll-table td { display: block; width: auto !important; }
+  .ll-table thead { display: none; }
+  .ll-unit { display: inline; font-size: 0.6em; }
+  .ll-table tr { padding: 18px 0; border-bottom: 1px solid #2A2C30; }
+  .ll-table th, .ll-table td { border: 0; padding: 4px 0; }
+  .ll-table tbody .num { text-align: left; }
+}

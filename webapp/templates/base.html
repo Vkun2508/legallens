@@ -1,21 +1,23 @@
 {% from "macros.html" import mark %}<!doctype html>
-<html lang="en">
+<html lang="en" class="{% block html_class %}{% endblock %}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}LegalLens{% endblock %}</title>
   <script>
     // Before first paint: mark JS, and apply a theme the visitor chose earlier (otherwise follow the system).
     document.documentElement.classList.add("js");
     try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
   </script>
-  <link rel="preload" href="{{ url_for('static', path='fonts/libre-caslon-text-400-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="{{ url_for('static', path='fonts/source-sans-3-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
-  <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}" type="image/svg+xml">
-  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=10">
+  <link rel="preload" href="{{ url_for('static', path='fonts/switzer-400.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', path='fonts/bricolage-grotesque-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}?v=2" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=12">
+  {% block head %}{% endblock %}
 </head>
 <body>
   <a class="skip-link" href="#content">Skip to content</a>
+  {% block masthead %}
   <header class="masthead">
     <a class="wordmark" href="{{ url_for('index') }}">{{ mark() }}<span>LegalLens</span></a>
     <nav class="site-nav" aria-label="Main">
@@ -26,17 +28,24 @@
       <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-links">Menu</button>
       <ul class="nav-links" id="nav-links">
         <li><a href="{{ url_for('index') }}#how">How it works</a></li>
-        <li><a href="{{ url_for('index') }}#flags">What it flags</a></li>
+        <li><a href="{{ url_for('index') }}#checks">What it checks</a></li>
       </ul>
-      <a class="button button-primary button-small" href="{{ url_for('index') }}#analyze"><span>Upload<span class="wide-only"> an agreement</span></span></a>
+      <a class="button button-primary button-small" href="{{ url_for('index') }}#audit"><span>Audit<span class="wide-only"> a policy</span></span></a>
     </nav>
   </header>
+  {% endblock %}
   <main id="content" class="{% block main_class %}page{% endblock %}" tabindex="-1">
     {% block content %}{% endblock %}
   </main>
+  {% block footer %}
   <footer class="site-footer">
-    <p>LegalLens is a research prototype. Its flags come from keyword rules and are automated help, not legal advice.</p>
+    <p>LegalLens gives compliance help from a keyword check against its rulebook. It is not legal advice; have a lawyer review critical findings.</p>
   </footer>
-  <script src="{{ url_for('static', path='app.js') }}?v=10"></script>
+  {% endblock %}
+  <script src="{{ url_for('static', path='app.js') }}?v=15"></script>
+  {% block scripts %}{% endblock %}
+  {# Prerender a same-site page when the pointer rests on its link ("moderate"). Every link here is a
+     plain GET of a page; audits are form POSTs, which are never prerendered. #}
+  <script type="speculationrules">{"prerender": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}]}</script>
 </body>
 </html>

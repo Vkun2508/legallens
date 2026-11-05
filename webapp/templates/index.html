@@ -1,126 +1,242 @@
 {% extends "base.html" %}
-{% from "macros.html" import fine_print, segments, tier_badge %}
+{% from "macros.html" import citation, mark, segments, tier_badge, wording %}
+{% block title %}LegalLens: is your privacy policy DPDP-ready?{% endblock %}
+{% block html_class %}landing{% endblock %}
+{% block main_class %}landing-main{% endblock %}
+{% block head %}
+  <meta name="description" content="LegalLens checks a startup's privacy policy or terms against India's DPDP Act and Rules, the E-Commerce Rules and the dark-pattern guidelines, and finds the required clauses that are missing.">
+  <meta name="theme-color" content="#0A0B0D">
+  <link rel="preload" href="{{ url_for('static', path='fonts/bricolage-grotesque-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', path='fonts/switzer-400.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ url_for('static', path='landing.css') }}?v=17">
+{% endblock %}
+{% block masthead %}
+  <header class="scan-nav">
+    <a class="scan-mark" href="{{ url_for('index') }}" aria-label="LegalLens, home">
+      {{ mark() }}
+      <span>LegalLens</span>
+    </a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#checks">What it checks</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><button type="submit" form="sample-form" class="scan-navlink">Sample report</button></li>
+      </ul>
+    </nav>
+  </header>
+{% endblock %}
 {% block content %}
-{% if error %}
-<div class="alert alert-error" role="alert"><strong>This file couldn't be reviewed.</strong> {{ error }}</div>
-{% endif %}
-
-{# The landing page's backdrop: the sample's fine print drifting up. Each risky phrase
-   takes its highlight as it crosses the hero's scan line (app.js). Decoration only. #}
-<div class="scanfield" aria-hidden="true"><div class="scan-text"><p class="scan-copy">
-{%- for row in sample.rows -%}
-{%- if row.kind == "gap" %}{{ row.text }} {% else -%}
-{%- for s in row.segments %}{% if s.hit %}<mark class="scan-hit {{ 'risk' if s.tier == 'high' else 'review' }}">{{ s.text }}</mark>{% else %}{{ s.text }}{% endif %}{% endfor %} {% endif -%}
-{%- endfor -%}
-</p></div></div>
-
-<section class="hero" aria-labelledby="hero-title">
-  <div class="scanline" aria-hidden="true"><span>Scanning</span></div>
-  <div class="hero-copy">
-    <h1 class="display" id="hero-title">Know what you're agreeing to.</h1>
-    <p class="lead">
-      LegalLens reads a terms of service, cardholder agreement or similar document, splits it into
-      clauses, and marks the ones worth a closer read, with the exact words behind each flag.
-    </p>
-    <div class="hero-actions">
-      <a class="button button-primary" href="#analyze">Upload an agreement</a>
-      <form class="js-analyze-form" action="{{ url_for('analyze_page') }}" method="post" enctype="multipart/form-data">
-        <textarea name="text" hidden>{{ sample_text }}</textarea>
-        <button type="submit" class="button">Review the sample agreement</button>
-      </form>
+{% set scan = sample.scan %}
+{% set sev = {"critical": "Critical", "major": "Major", "minor": "Minor"} %}
+<section class="scan" id="scan" aria-labelledby="hero-title"
+         data-score="{{ scan.score }}" data-issues="{{ scan.issues }}" data-missing="{{ scan.missing }}" data-clauses="{{ scan.clauses }}">
+  {# The scene: the sample policy's real audit, played as a scan. Decoration for sighted visitors;
+     the same findings are listed for screen readers below. #}
+  <div class="scan-stage-wrap" aria-hidden="true" data-ui>
+    <canvas class="scan-dither"></canvas>
+    <div class="scan-stage">
+      <div class="scan-world"><div class="scan-group">
+        <div class="scan-drift">
+          <div class="scan-paper"></div>
+          <article class="scan-card scan-title"><div class="scan-bg"></div><div class="scan-tx"><h3>{{ scan.title }}</h3><p>{{ scan.updated }}</p></div></article>
+          {% for it in scan["items"] %}
+          {% if it.kind == "clause" %}
+          <article class="scan-card{% if it.flag %} is-flag{% endif %}"{% if it.flag %} data-findings="{{ it.flag.count }}"{% endif %}{% if it.focus %} data-focus="{{ it.focus }}"{% endif %}>
+            {% if it.flag %}<div class="scan-cast"></div><div class="scan-bgl"></div>{% endif %}
+            <div class="scan-bg"></div>
+            <div class="scan-tx"><h3>{% if it.number %}{{ it.number }}. {% endif %}{{ it.heading or "" }}</h3><p>{{ it.html }}</p></div>
+            {% if it.flag %}<div class="scan-tag {{ it.flag.tier }}"><b>{{ sev[it.flag.tier] }}</b><span>{{ it.flag.cite }}</span></div>{% endif %}
+          </article>
+          {% else %}
+          <div class="scan-slot {{ it.tier }}"{% if it.focus %} data-focus="{{ it.focus }}"{% endif %}><div class="scan-box"><div class="scan-boxbg"></div><b>Not found</b><span>{{ it.title }}</span><small>{{ it.cite }}, {{ it.tier }}</small></div></div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="scan-beam"></div>
+      </div></div>
     </div>
-    <p class="hero-note">Flags come from keyword rules, not legal judgement. Documents are processed in memory and never stored.</p>
+    {# The read's verdicts, set large beside each close-up. #}
+    <div class="scan-verdicts">
+      {% set fc = scan.focus_clause %}{% set fs = scan.focus_slot %}
+      {% if fc %}<div class="scan-verdict" data-v="1">
+        <p class="v-tier {{ fc.flag.tier }}">{{ sev[fc.flag.tier] }}</p>
+        <p class="v-title">{{ fc.flag.title }}.</p>
+        <p class="v-cite">{{ fc.flag.cite }}, possible issue</p>
+        <p class="v-quote">Kettle's policy: &ldquo;&hellip;{{ fc.flag.quote }}&rdquo;</p>
+      </div>{% endif %}
+      {% if fs %}<div class="scan-verdict" data-v="2">
+        <p class="v-tier {{ fs.tier }}">Not found</p>
+        <p class="v-title">{{ fs.rule_title }}.</p>
+        <p class="v-cite">{{ fs.cite }}, {{ fs.tier }}</p>
+        <p class="v-quote">No clause in Kettle's policy mentions it.</p>
+      </div>{% endif %}
+    </div>
   </div>
 
-  <div class="stage">
-    <div class="loupe" id="loupe" tabindex="0" role="group"
-         aria-label="Sample agreement under a lens. Arrow keys move the lens." aria-describedby="lens-tag">
-      <div class="sheet fine-print" aria-hidden="true">{{ fine_print(sample.rows, tier_labels) }}</div>
-      <div class="lens" aria-hidden="true">
-        <div class="lens-view"><div class="sheet fine-print" >{{ fine_print(sample.rows, tier_labels) }}</div></div>
+  <div class="scan-copy">
+    {% if error and error_origin == "url" %}<p class="scan-error" role="alert"><strong>This policy couldn't be audited.</strong> {{ error }}</p>{% endif %}
+    <h1 id="hero-title"><span class="scan-line"><span>What's missing from</span></span> <span class="scan-line"><span>your privacy policy?</span></span></h1>
+    <p class="scan-lede">LegalLens checks your privacy policy or terms against the DPDP Act and Rules, the E-Commerce Rules and the dark-pattern guidelines. It finds the required clauses that aren't there, and flags risky wording with the section behind it.</p>
+    <p class="scan-lede scan-lede-short">Checked against the DPDP Act and Rules, the E-Commerce Rules and the dark-pattern guidelines: the required clauses that aren't there, and risky wording with its section.</p>
+    <form class="scan-form js-analyze-form" id="scan-form" action="{{ url_for('audit_page') }}" method="post" enctype="multipart/form-data">
+      <label for="policy-url">Your policy's web address</label>
+      <div class="scan-row">
+        <input id="policy-url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="yourstartup.in/privacy" value="{{ form.url if form else '' }}" required>
+        <button type="submit">Scan it free</button>
       </div>
+    </form>
+    <p class="scan-alt">Or <a href="#audit">paste the text</a> or <a href="#audit">upload a PDF</a>. A keyword check, not legal advice.</p>
+  </div>
+
+  <div class="scan-result">
+    <p class="scan-score"><span>{{ scan.score }}</span><small>/ 100</small></p>
+    <p>Kettle's sample policy scored {{ scan.score }} out of 100: {{ scan.issues }} possible issues, and {{ scan.missing }} required clauses that aren't there, each with its section and wording to fix it.</p>
+    <div class="scan-actions">
+      <a class="scan-btn" href="#scan" data-rescan>Scan your policy</a>
+      <button type="submit" form="sample-form" class="scan-btn scan-btn-quiet">Open Kettle's full report</button>
     </div>
-    <div class="lens-side">
-      <p class="lens-tag" id="lens-tag" aria-live="polite">
-        <span class="lens-tag-tier"></span>
-        <span class="lens-tag-note">The highlighted phrases are what LegalLens flags in this sample.</span>
-      </p>
-      <div class="lens-controls">
-        <button type="button" class="button button-small" data-lens-step="-1">Previous flag</button>
-        <button type="button" class="button button-small" data-lens-step="1">Next flag</button>
-      </div>
-    </div>
+    <p class="scan-fine">Estimated score from a keyword check against rulebook {{ scan.rulebook }}. Not legal advice.</p>
+  </div>
+
+  <div class="scan-hud" aria-hidden="true">
+    <div class="h-doc"><b>Kettle privacy policy</b>a sample, Bengaluru</div>
+    <div class="h-prog"><b id="hud-clause">Estimated score {{ scan.score }} / 100</b><div class="h-bar"><i id="hud-bar"></i></div></div>
+    <div class="h-crit"><b id="hud-issues">{{ scan.issues }}</b>possible issues</div>
+    <div class="h-miss"><b id="hud-missing">{{ scan.missing }}</b>not found</div>
+    <div class="h-rule"><b>{{ laws | sum(attribute="checked") }} rules, {{ laws | length }} laws</b>rulebook {{ scan.rulebook }}</div>
+    <div class="h-days"><b id="hud-days" data-in-force="{{ in_force.isoformat() }}">{{ days_to_in_force }} days</b>to DPDP duties, {{ in_force_label }}</div>
+  </div>
+
+  <div class="visually-hidden">
+    <h2>Sample result: {{ scan.title }}</h2>
+    <ul>
+      {% for it in scan["items"] %}
+      {% if it.kind == "clause" and it.flag %}<li>{{ sev[it.flag.tier] }}, possible issue: {{ it.flag.title }} ({{ it.flag.cite }}), in clause {{ it.number }}, {{ it.heading }}.</li>
+      {% elif it.kind == "slot" %}<li>Not found: {{ it.title }} ({{ it.cite }}).</li>{% endif %}
+      {% endfor %}
+    </ul>
+    <p>Estimated score {{ scan.score }} out of 100: {{ scan.issues }} possible issues and {{ scan.missing }} required clauses not found.</p>
   </div>
 </section>
 
-{% if sample.example %}
+<form id="sample-form" class="js-analyze-form" action="{{ url_for('audit_page') }}" method="post" enctype="multipart/form-data" hidden>
+  <textarea name="text" hidden>{{ sample_text }}</textarea>
+  <input type="hidden" name="name" value="Kettle privacy policy (sample)">
+</form>
+
 {% set ex = sample.example %}
-{% set ex_clause = ex.card.clause %}
-<section class="how" id="how" aria-labelledby="how-title">
-  <h2 id="how-title">How it works</h2>
-  <p class="section-intro">One clause from the sample agreement, from raw text to flag.</p>
-  <ol class="how-steps">
-    <li>
-      <span class="how-num" aria-hidden="true">1</span>
-      <h3>Read the text</h3>
-      <p>Text is taken from your PDF or file and cleaned up: page numbers, running headers and words split across lines are fixed.</p>
-      <div class="how-sample how-raw">{{ ex.segments | map(attribute="text") | join }}</div>
-    </li>
-    <li>
-      <span class="how-num" aria-hidden="true">2</span>
-      <h3>Find the clauses</h3>
-      <p>Numbering, headings and labelled paragraphs mark where each clause starts and ends.</p>
-      <div class="how-sample">
-        <p class="how-head">§ {{ ex_clause.number }}{% if ex_clause.heading %} <span>{{ ex_clause.heading }}</span>{% endif %}</p>
-        <p>{{ ex_clause.text }}</p>
-      </div>
-    </li>
-    <li>
-      <span class="how-num" aria-hidden="true">3</span>
-      <h3>Flag what matters</h3>
-      <p>Each clause is checked against watched phrases in {{ category_count }} categories. The words that matched are the evidence.</p>
-      <div class="how-sample how-flagged tier-{{ ex.card.risk.tier }}">
-        <p>{{ segments(ex.card.segments) }}</p>
-        <p class="how-note">{{ tier_badge(ex.card.risk.tier, tier_labels) }}
-          {% for category, phrases in ex.card.categories %}{{ category.label }}{{ ", " if not loop.last }}{% endfor %}</p>
-      </div>
-    </li>
-  </ol>
+{% set rules_checked = laws | sum(attribute="checked") %}
+{% if ex %}
+{% set issue = ex.issues[0] %}
+<section class="ll-how" id="how" aria-labelledby="how-title">
+  <div class="ll-how-copy">
+    <h2 id="how-title">From your wording to a fix</h2>
+    <ol class="ll-steps">
+      <li><b>Read</b><p>Your policy is cleaned up and split into clauses, using its own numbering and headings.</p></li>
+      <li><b>Check</b><p>Each clause is compared with {{ rules_checked }} rules, each citing the section it comes from. Required clauses that no clause covers are listed as missing.</p></li>
+      <li><b>Fix</b><p>Every possible issue and missing clause comes with wording you can adapt to your policy.</p></li>
+    </ol>
+  </div>
+  {# One real clause from the sample, marked up the way the report does it. #}
+  <figure class="ll-redline" data-ui>
+    <figcaption>Kettle's privacy policy, a sample: {{ ex.ref }}</figcaption>
+    <div class="ll-sheet">
+      <p class="ll-sheet-head">{{ ex.clause.heading or ex.ref }}</p>
+      <p class="ll-sheet-text">{% for s in ex.segments %}{% if s.hit %}<del>{{ s.text }}</del>{% else %}{{ s.text }}{% endif %}{% endfor %}</p>
+      <p class="ll-sheet-flag {{ issue.tier }}">{{ tier_badge(issue.tier, tier_labels, qualifier=issue.verdict_label | lower) }} {{ issue.title }}, {{ issue.citation }}</p>
+      <p class="ll-sheet-fix"><span>Suggested wording</span><ins>{{ issue.wording }}</ins></p>
+    </div>
+  </figure>
 </section>
 {% endif %}
 
-<section class="flags" id="flags" aria-labelledby="flags-title">
-  <h2 id="flags-title">What LegalLens flags</h2>
-  <p class="section-intro">
-    Each category is a set of watched phrases. A clause takes the tier of the most serious category
-    it matches. "No flags" means no watched phrase was found, not that a clause is harmless.
-  </p>
-  <div class="table-frame">
-    <table class="ledger">
-      <caption class="visually-hidden">Categories LegalLens flags, with their tiers</caption>
+<section class="ll-deadline" aria-labelledby="deadline-title">
+  <h2 id="deadline-title"><span class="ll-days">{{ days_to_in_force }} days</span> <span class="ll-until">until {{ in_force_label }}</span></h2>
+  <p>That is when most duties under the DPDP Act apply. A notice must say what you collect and why, how to withdraw consent as easily as it was given, and how to complain to the Data Protection Board. US-style templates that only mention children under 13 don't meet its rule on children's data.</p>
+</section>
+
+<section class="ll-checks" id="checks" aria-labelledby="checks-title">
+  <div class="ll-checks-head">
+    <h2 id="checks-title">{{ rules_checked }} rules from three Indian laws</h2>
+    <p>Each rule has a plain-language explanation, the wording that meets it, and the section it rests on, checked against the official text (rulebook {{ rulebook_version }}).</p>
+    {% set rc = rule_card %}
+    {# One rule as the rulebook holds it: the one Kettle's sample is missing. #}
+    <figure class="ll-rule" data-ui>
+      <figcaption>One rule from the rulebook. Kettle's policy is missing it.</figcaption>
+      <div class="ll-rule-card">
+        <p class="ll-rule-meta">{{ tier_badge("high", tier_labels, qualifier="required clause") }} <span class="ll-rule-id">{{ rc.id }}</span></p>
+        <p class="ll-rule-title">{{ rc.title }}</p>
+        <p class="ll-rule-cite">{{ rc.citation }}{% for c in rc.also_cites %}, {{ c }}{% endfor %}</p>
+        <blockquote class="ll-rule-quote"><p>“{{ rc.quote }}”</p>{% if rc.verified %}<footer>{{ rc.citation }}, checked against the official text</footer>{% endif %}</blockquote>
+        <p class="ll-sheet-fix"><span>Wording that meets it</span><ins>{{ rc.how_to_fix }}</ins></p>
+      </div>
+    </figure>
+  </div>
+  <div class="ll-table" data-ui>
+    <table>
+      <caption class="visually-hidden">The laws LegalLens checks, what it looks for and how many rules</caption>
       <thead>
-        <tr><th scope="col">Category</th><th scope="col">What it means</th><th scope="col">Tier</th></tr>
+        <tr><th scope="col">Law</th><th scope="col">What it checks</th><th scope="col" class="num">Rules</th></tr>
       </thead>
       <tbody>
-        {% for tier, categories in categories_by_tier %}
-        {% for category in categories %}
+        {% for law in laws %}
         <tr>
-          <th scope="row">{{ category.label }}</th>
-          <td>{{ category.description }}</td>
-          <td>{{ tier_badge(tier, tier_labels) }}</td>
+          <th scope="row">{{ law.name }}<span class="ll-sub">Applies to {{ law.applies | lower }}</span></th>
+          <td>{{ law.summary }}</td>
+          <td class="num">{{ law.checked }}<span class="ll-unit"> rules</span>{% if law.manual %}<span class="ll-sub">+ {{ law.manual }} to check by hand</span>{% endif %}</td>
         </tr>
-        {% endfor %}
         {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
 
-<section class="analyze" id="analyze" aria-labelledby="analyze-title">
-  <h2 id="analyze-title">Upload an agreement</h2>
-  <p class="section-intro">A PDF with selectable text, a .txt or a .md file, up to {{ max_mb }} MB and {{ max_pages }} pages. Or paste the text.</p>
+<section class="ll-pricing" id="pricing" aria-labelledby="pricing-title">
+  <h2 id="pricing-title">Your first scan is free</h2>
+  <dl class="ll-plans">
+    <div class="ll-plan is-now">
+      <dt>Free scan</dt>
+      <dd class="ll-plan-what">Your score and a summary of the possible issues and missing clauses.</dd>
+      <dd class="ll-plan-price">₹0</dd>
+    </div>
+    <div class="ll-plan">
+      <dt>Full audit report</dt>
+      <dd class="ll-plan-what">A PDF report with the score, every finding with its citation, the wording to fix it, and the disclaimer.</dd>
+      <dd class="ll-plan-price">about ₹4,999 <small>once</small></dd>
+    </div>
+    <div class="ll-plan">
+      <dt>Monitoring</dt>
+      <dd class="ll-plan-what">Your audit history and score over time, re-run on every new version of your policy.</dd>
+      <dd class="ll-plan-price">about ₹1,999 <small>a month</small></dd>
+    </div>
+  </dl>
+  <div class="ll-pricing-foot">
+    <p>LegalLens is in early access. Paid plans open after launch; the prices are indicative.</p>
+    <a class="scan-btn" href="#scan" data-rescan>Scan your policy free</a>
+  </div>
+</section>
 
-  <form class="upload-form js-analyze-form" id="upload-form" action="{{ url_for('analyze_page') }}" method="post" enctype="multipart/form-data">
+<section class="ll-audit" id="audit" aria-labelledby="audit-title">
+  <div class="ll-audit-head">
+    <h2 id="audit-title">Audit a policy</h2>
+    <p>Your privacy policy or terms: a PDF with selectable text, a .txt or a .md file, up to {{ max_mb }} MB and {{ max_pages }} pages. Or paste the text. To scan a web page, use the address box at the top.</p>
+  </div>
+
+  <form class="upload-form js-analyze-form" id="upload-form" action="{{ url_for('audit_page') }}" method="post" enctype="multipart/form-data">
+    <fieldset class="choice">
+      <legend class="field-label">What does your business do?</legend>
+      <div class="choice-options">
+        {% set chosen = form.business_type if form and form.business_type else business_types[0][0] %}
+        {% for value, label, hint in business_types %}
+        <label class="choice-option">
+          <input type="radio" name="business_type" value="{{ value }}"{% if value == chosen %} checked{% endif %}>
+          <span><span class="choice-label">{{ label }}</span> <span class="hint">{{ hint }}</span></span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
     <label class="dropzone" id="dropzone">
       <input class="visually-hidden" type="file" name="file" id="file-input" accept="{{ accept }}"
              aria-describedby="file-hint">
@@ -141,17 +257,19 @@
     <p class="visually-hidden" id="file-status" role="status" aria-live="polite"></p>
 
     <label class="field">
-      <span class="field-label">Or paste the agreement text</span>
-      <textarea name="text" rows="8"></textarea>
+      <span class="field-label">Or paste the policy text</span>
+      <textarea name="text" rows="8">{{ form.text if form else '' }}</textarea>
     </label>
 
     <div class="form-actions">
-      <button type="submit" class="button button-primary" id="submit-button">Review this agreement</button>
+      <button type="submit" class="button button-primary" id="submit-button">Audit this policy</button>
     </div>
+    {# Filled by the server after a failed audit, or by app.js when nothing was chosen. #}
+    <p class="form-error" id="upload-error" role="alert" tabindex="-1">{% if error and error_origin == "upload" %}<strong>This policy couldn't be audited.</strong> {{ error }}{% endif %}</p>
   </form>
 
   <div class="loading" id="loading" hidden>
-    <p class="loading-title" role="status">Reviewing your document…</p>
+    <p class="loading-title" role="status">Auditing your policy…</p>
     <div class="skeleton" aria-hidden="true">
       <div class="skeleton-head"><i style="width: 40%"></i><i style="width: 64%"></i></div>
       <div class="skeleton-sheet">
@@ -164,24 +282,52 @@
       </div>
     </div>
   </div>
+  {% set fx = sample.fixes %}
+  {% if fx %}
+  {# An excerpt of the real draft-fixes file for the sample, as the download writes it. #}
+  <figure class="ll-file" data-ui>
+    <figcaption>With every audit, a draft-fixes file: your policy with a note after each flagged clause. From Kettle's:</figcaption>
+    <div class="ll-file-sheet">
+      <p class="ll-file-name">Kettle privacy policy (sample).draft-fixes.md</p>
+      <p class="ll-file-head">{{ fx.clause.number }}. {{ fx.clause.heading }}</p>
+      <p class="ll-file-text">{{ fx.clause.text }}</p>
+      {% for i in fx.issues %}
+      {% set w = i.title.split(" ")[0][1:] %}{# "SaaS billing" keeps its capitals mid-sentence #}
+      <blockquote class="ll-file-note"><p><b>LegalLens: {{ i.verdict_label | lower }} under {{ i.citation }}, {{ i.title if w != w | lower else (i.title[0] | lower) ~ i.title[1:] }}.</b> Consider: {{ i.wording }}</p></blockquote>
+      {% endfor %}
+    </div>
+  </figure>
+  {% endif %}
 </section>
 
-<section class="notes" aria-label="About your document and the flags">
-  <div>
-    <h2>What happens to your document</h2>
-    <p>
-      It is processed in memory on this server and discarded as soon as the results page is sent.
-      Nothing is saved, and the document's content is never written to the server's logs.
-    </p>
-  </div>
-  <div>
-    <h2>What the flags mean</h2>
-    <p>
-      Flags come from keyword rules, the first of the methods this project compares. They show
-      which topics a clause touches, with the matching phrases as evidence. They can miss terms
-      worded differently, flag harmless mentions, and never say whether a clause is fair or
-      enforceable.
-    </p>
-  </div>
+<section class="ll-faq" aria-labelledby="faq-title">
+  <h2 id="faq-title">Questions</h2>
+  <dl>
+    <div><dt>What happens to my document?</dt>
+      <dd>It is processed in memory on this server and discarded as soon as the results page is sent. Nothing is saved, nothing is sent to another service, and the document's content is never written to the server's logs. A web page you scan is handled the same way.</dd></div>
+    <div><dt>Is this legal advice?</dt>
+      <dd>No. LegalLens matches your wording against its rulebook. It can miss wording it doesn't expect and can't judge whether a clause is lawful, so it reports possible issues, never violations. Have a lawyer review critical findings before you rely on them.</dd></div>
+    <div><dt>What does "not found" mean?</dt>
+      <dd>No clause in your policy matched a rule that the law expects a policy to cover. It is a prompt to check, and each one comes with wording you can adapt.</dd></div>
+    <div><dt>Why is the score an estimate?</dt>
+      <dd>It weighs each rule by its severity (critical, major or minor) across the rules that apply to your kind of business. A keyword check can't confirm a clause is lawful, so the score is a guide, not a grade.</dd></div>
+    <div><dt>Can it read my website?</dt>
+      <dd>Give the address of your privacy policy, or just your homepage and LegalLens follows its privacy policy link. Pages that need JavaScript or block automated visitors can be pasted instead.</dd></div>
+  </dl>
 </section>
+{% endblock %}
+{% block footer %}
+  <footer class="ll-footer">
+    <p class="ll-footer-name" aria-hidden="true">LegalLens</p>
+    <div class="ll-footer-notes">
+      <p>LegalLens gives compliance help from a keyword check against its rulebook ({{ rulebook_version }}). It is not legal advice; have a lawyer review critical findings.</p>
+      <p>Kettle is a fictional sample policy. Type: Bricolage Grotesque (SIL Open Font License) and Switzer (ITF Free Font License).</p>
+    </div>
+  </footer>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', path='vendor/gsap.min.js') }}" defer></script>
+  <script src="{{ url_for('static', path='vendor/ScrollTrigger.min.js') }}" defer></script>
+  <script src="{{ url_for('static', path='vendor/lenis.min.js') }}" defer></script>
+  <script src="{{ url_for('static', path='landing.js') }}?v=17" defer></script>
 {% endblock %}

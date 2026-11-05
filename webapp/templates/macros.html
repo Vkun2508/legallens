@@ -1,27 +1,47 @@
 {% macro mark(class="") -%}
-<svg class="mark {{ class }}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-  <circle class="mark-ring" cx="17" cy="17" r="12.5"/>
-  <path class="mark-handle" d="M26.2 26.2 35 35"/>
-  <text class="mark-glyph" x="17" y="22.6" text-anchor="middle">§</text>
-</svg>
+<svg class="mark {{ class }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="18"/><path d="M2 12h20"/></svg>
 {%- endmacro %}
 
+{# A colour mark and the severity's name. `qualifier` is true (the label's own second part) or a string. #}
 {% macro tier_badge(tier, tier_labels, qualifier=false) -%}
-<span class="tier-badge tier-{{ tier }}">{{ tier_labels[tier][0] }}{% if qualifier %}<span class="tier-qualifier">, {{ tier_labels[tier][1] | lower }}</span>{% endif %}</span>
+<span class="tier-badge tier-{{ tier }}">{{ tier_labels[tier][0] }}{% if qualifier %}<span class="tier-qualifier">, {{ qualifier if qualifier is string else tier_labels[tier][1] | lower }}</span>{% endif %}</span>
 {%- endmacro %}
 
-{# Document text with matched phrases marked; the title names the category. #}
+{# Document text with matched phrases marked; the title names the rule. #}
 {% macro segments(parts) -%}
 {% for s in parts %}{% if s.hit %}<mark class="hit" title="{{ s.hit }}">{{ s.text | doc_breaks }}</mark>{% else %}{{ s.text | doc_breaks }}{% endif %}{% endfor %}
 {%- endmacro %}
 
+{# "DPDP Act s.6(4), also DPDP Rules r.3(c)(i)" #}
+{% macro citation(rule) -%}
+<span class="citation">{{ rule.citation }}{% if rule.also_cites %}<span class="citation-also">, also {{ rule.also_cites | join(", ") }}</span>{% endif %}</span>
+{%- endmacro %}
+
+{% macro verified(rule) -%}
+{% if rule.verified %}<span class="verified"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 8.5 3 3 6-7"/></svg>Checked against the official text</span>
+{%- else %}<span class="verified is-unverified">Not yet checked against the official text</span>{% endif %}
+{%- endmacro %}
+
+{# Suggested wording behind a disclosure. The copy button is revealed by app.js; without JS the text can be selected. #}
+{% macro wording(text, id, label="Suggested wording", detail=none) -%}
+<details class="wording">
+  <summary>{{ label }}</summary>
+  <div class="wording-body">
+    {% if detail %}<p class="wording-detail">{{ detail }}</p>
+    <p class="wording-label">Suggested wording</p>{% endif %}
+    <p class="wording-text" id="{{ id }}">{{ text }}</p>
+    <button type="button" class="button button-small copy-button" data-copy="{{ id }}" hidden>Copy wording</button>
+  </div>
+</details>
+{%- endmacro %}
+
 {# The homepage sheet: the sample set as fine print. Rendered twice, once under the lens. #}
-{% macro fine_print(rows, tier_labels) -%}
+{% macro fine_print(rows, tier_labels, park=none) -%}
 {% for row in rows %}
 {% if row.kind == "gap" %}<p class="fp-gap">{{ row.text }}</p>
-{% else %}{% set card = row.card %}<p class="fp-clause tier-{{ card.risk.tier }}" data-clause="{{ card.clause.index }}"
-   data-tier="{{ card.risk.tier }}" data-tier-label="{{ tier_labels[card.risk.tier][0] }}"
-   data-note="{% for category, phrases in card.categories %}{{ category.label }}. {{ category.description }}{{ ' ' if not loop.last }}{% endfor %}">{{ segments(row.segments) }}</p>
+{% else %}<p class="fp-clause tier-{{ row.tier }}" data-clause="{{ row.clause.index }}"
+   data-tier="{{ row.tier }}" data-tier-label="{{ tier_labels[row.tier][0] }}"{% if park and park.clause.index == row.clause.index %} data-park{% endif %}
+   data-note="{{ row.note }}">{{ segments(row.segments) }}</p>
 {% endif %}
 {% endfor %}
 {%- endmacro %}

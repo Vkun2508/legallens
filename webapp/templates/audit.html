@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% from "macros.html" import citation, mark, segments, tier_badge, verified, wording %}
+{% block title %}{{ result.source }}: audit - LegalLens{% endblock %}
+{% block main_class %}page page-results{% endblock %}
+{% block content %}
+{% set report = view.data %}
+{% set score = report.score %}
+{% set doc_warnings = result.warnings[1:] if report.mode_reason else result.warnings %}
+
+<header class="results-head screen-only">
+  <div class="results-title">
+    <h1>{{ result.source }}</h1>
+    <div class="score">
+      <p class="score-line">
+        <span class="score-label">{{ "Estimated score" if score.estimated else "Score" }}</span>
+        <span class="score-value">{{ score.value }}</span> <span class="score-max">out of 100</span>
+      </p>
+      <span class="score-meter" aria-hidden="true"><i style="width: {{ score.value }}%"></i></span>
+    </div>
+    {% for line in view.status %}<p class="status">{{ line }}</p>{% endfor %}
+  </div>
+  <div class="actions">
+    <button type="button" class="button button-primary" id="print-summary" aria-describedby="print-hint">Print report</button>
+    <button type="button" class="button" id="download-fixes" aria-describedby="fixes-hint" hidden>Download draft fixes</button>
+    <a class="button" href="{{ url_for('index') }}#audit">Audit another policy</a>
+    <p class="hint" id="print-hint">The report lists the score, missing clauses and every possible issue with its section. Choose "Save as PDF" in the print dialog to keep a copy.</p>
+    <p class="hint" id="fixes-hint" hidden>Draft fixes: your policy with a note after each flagged clause and suggested wording for each missing one, as a Markdown file.</p>
+  </div>
+</header>
+
+{% if report.mode == "partial" %}
+<div class="alert alert-warning screen-only" role="status">
+  <strong>A keyword check, not a legal review.</strong>
+  LegalLens matched your wording against its rulebook. A possible issue needs a read, and a missing
+  clause needs adding or confirming. Have a lawyer review anything critical before relying on it.
+</div>
+{% endif %}
+{% if doc_warnings %}
+<div class="alert alert-warning screen-only" role="status">
+  <strong>About this document</strong>
+  <ul>{% for warning in doc_warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<section class="missing screen-only" aria-labelledby="missing-title">
+  <h2 id="missing-title">Missing clauses</h2>
+  {% if view.missing %}
+  <p class="section-intro">The law expects your policy to say these things, and no clause seems to. Most severe first.</p>
+  <ol class="missing-list">
+    {% for m in view.missing %}
+    <li class="missing-item">
+      <div class="missing-side">{{ tier_badge(m.tier, tier_labels) }}</div>
+      <div class="missing-main">
+        <h3 class="missing-title">{{ m.title }}</h3>
+        <p class="missing-cite">{{ citation(m) }} {{ verified(m) }}</p>
+        <p class="missing-desc">{{ m.what_it_means }}</p>
+        {% if m.basis_note %}<p class="basis-note">{{ m.basis_note }}</p>{% endif %}
+        {{ wording(m.how_to_fix, "wording-missing-" ~ loop.index) }}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="section-intro">Every required topic is covered by at least one clause. A keyword check can't confirm the wording is enough, so read the possible issues below too.</p>
+  {% endif %}
+</section>
+
+<details class="limits screen-only">
+  <summary>How to read these results</summary>
+  <ul>
+    <li><strong>Possible issue</strong> means a clause uses wording that resembles something the law restricts. Read it: a keyword check can't tell "we sell your data" from "we never sell your data".</li>
+    <li><strong>Missing</strong> means no clause matched what the law expects a policy to say. If you cover it in wording LegalLens doesn't recognise, you can ignore it.</li>
+    <li>The score weighs each rule by severity (critical 10, major 5, minor 2). A possible issue counts half. It is an estimate, not a grade from any regulator.</li>
+    <li>Each rule cites the law it rests on. "Checked against the official text" means its quote was compared with the Gazette; the dark-pattern rules have not been yet.</li>
+    <li>Most DPDP Act duties apply from 13 May 2027. The E-Commerce Rules (2020) and the dark-pattern guidelines (2023) apply now.</li>
+    <li>The document shown is the text extracted from your file after clean-up, not its page layout. Scanned PDFs have no text to read.</li>
+    <li>This is compliance help, not legal advice. Rulebook {{ report.rulebook_version }}.</li>
+  </ul>
+</details>
+
+{% if view.clause_count %}
+<div class="toolbar screen-only" id="toolbar">
+  <div class="filters" role="group" aria-label="Show clauses by severity">
+    <button type="button" class="filter" data-filter="all" aria-pressed="true">All <span class="filter-count">{{ view.clause_count }}</span></button>
+    {% for t in view.tiers %}
+    <button type="button" class="filter tier-{{ t.key }}" data-filter="{{ t.key }}" data-label="{{ tier_labels[t.key][0] }}" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>{{ tier_labels[t.key][0] }} <span class="filter-count">{{ t.count }}</span></button>
+    {% endfor %}
+  </div>
+  {% if view.flagged and view.flagged < view.clause_count %}
+  <button type="button" class="filter fold-toggle" id="fold-toggle" aria-pressed="false">Fold clauses without issues</button>
+  {% endif %}
+  {% if view.flagged %}
+  <div class="flagnav" role="group" aria-label="Clauses with possible issues">
+    <button type="button" class="button button-small" data-step="-1" aria-keyshortcuts="k">Previous<span class="visually-hidden"> issue</span> <kbd aria-hidden="true">K</kbd></button>
+    <span class="flag-count" id="flag-count">{{ view.flagged }} flagged</span>
+    <button type="button" class="button button-small" data-step="1" aria-keyshortcuts="j">Next<span class="visually-hidden"> issue</span> <kbd aria-hidden="true">J</kbd></button>
+  </div>
+  {% endif %}
+</div>
+<p class="visually-hidden" id="reader-status" role="status" aria-live="polite"></p>
+
+<div class="reader screen-only" id="reader">
+  <div class="rail" aria-hidden="true">
+    <div class="rail-track">
+      {% for row in view.rows %}<i class="tick {{ 'tick-gap' if row.kind == 'gap' else 'tier-' ~ row.tier }}" data-row="{{ loop.index0 }}"></i>{% endfor %}
+      <span class="rail-window"></span>
+    </div>
+  </div>
+
+  <div class="sheet doc">
+    {% for row in view.rows %}
+    {% if row.kind == "gap" %}
+    <div class="row row-gap" data-row="{{ loop.index0 }}"><p class="gap-text">{{ row.text }}</p></div>
+    {% else %}
+    {% set clause = row.clause %}
+    <article class="row row-clause tier-{{ row.tier }}" id="clause-{{ clause.index }}" data-row="{{ loop.index0 }}"
+             data-clause="{{ clause.index }}" data-tier="{{ row.tier }}" data-ref="{{ row.ref }}" tabindex="-1"
+             aria-label="{{ row.ref }}, {{ tier_labels[row.tier][0] }}">
+      <button type="button" class="row-stub" hidden>{{ row.ref }}{% if clause.heading %}, {{ clause.heading }}{% endif %}: no issues found. Show</button>
+      <p class="row-text"><span class="clause-text" id="span-{{ clause.index }}">{{ segments(row.segments) }}</span></p>
+      <aside class="note">
+        {% for issue in row.issues %}
+        <div class="note-issue">
+          <p class="note-tier">{{ tier_badge(issue.tier, tier_labels, qualifier=issue.verdict_label | lower) }}</p>
+          <p class="note-label">{{ issue.title }}</p>
+          <p class="note-cite">{{ citation(issue) }}</p>
+          {{ wording(issue.wording, "wording-" ~ issue.finding_id, label="Why and how to fix", detail=issue.detail) }}
+        </div>
+        {% endfor %}
+        {% if row.covers %}
+        <p class="note-covers"><span class="note-covers-label">Meets</span> {% for c in row.covers %}{{ c.title }} ({{ c.citation }}){{ "; " if not loop.last }}{% endfor %}</p>
+        {% endif %}
+        {% if not row.issues and not row.covers %}<p class="note-none">No issues found</p>{% endif %}
+        <p class="note-meta">{{ row.ref }}, characters {{ "{:,}".format(clause.start) }}–{{ "{:,}".format(clause.end) }}{% if clause.text | length > long_clause_chars %} <span class="badge">long</span>{% endif %}</p>
+      </aside>
+    </article>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if view.manual_checks %}
+<section class="screens screen-only" aria-labelledby="screens-title">
+  <h2 id="screens-title">Check your app's screens too</h2>
+  <p class="section-intro">
+    These {{ view.manual_checks | length }} dark patterns live in an app's screens, not in its policy, so a document
+    can't show them. Walk through your sign-up, checkout and cancellation flows and look for each one.
+  </p>
+  <ul class="checklist">
+    {% for m in view.manual_checks %}
+    <li>
+      <p class="check-title">{{ m.title }} <span class="citation">{{ m.citation }}</span></p>
+      <p class="check-desc">{{ m.what_it_means }} {{ m.how_to_fix }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="export screen-only" aria-labelledby="export-title">
+  <h2 id="export-title">Keep a copy</h2>
+  <button type="button" class="link-button" id="download-json" aria-describedby="export-desc">Export data (JSON)</button>
+  <p id="export-desc">
+    Every finding, missing clause and rule citation, in the same format as the <code>/api/audit</code>
+    endpoint. Nothing is kept on the server, so export or print the report if you want it later.
+  </p>
+</section>
+<p class="visually-hidden" id="copy-status" role="status" aria-live="polite"></p>
+
+{# Shown only when printing: the audit as a report. #}
+<section class="print-report">
+  <header class="print-header">
+    <p class="print-brand">{{ mark() }} LegalLens compliance audit</p>
+    <h1>{{ result.source }}</h1>
+    <p class="print-meta">
+      Generated {{ generated_on }} with rulebook {{ report.rulebook_version }}.
+      {{ "Estimated score" if score.estimated else "Score" }}: {{ score.value }} out of 100.
+    </p>
+    {% for line in view.status %}<p class="print-meta">{{ line }}</p>{% endfor %}
+  </header>
+
+  {% if view.missing %}
+  <h2 class="print-tier">Missing clauses <span>({{ view.missing | length }})</span></h2>
+  {% for m in view.missing %}
+  <article class="print-clause tier-{{ m.tier }}">
+    <h3>{{ m.title }} <span class="print-sev">{{ tier_labels[m.tier][0] }}, {{ m.citation }}</span></h3>
+    <p class="print-why">{{ m.what_it_means }}</p>
+    <p class="print-why"><strong>Suggested wording:</strong> {{ m.how_to_fix }}</p>
+  </article>
+  {% endfor %}
+  {% endif %}
+
+  {% for tier, items in view.print_groups if items %}
+  <h2 class="print-tier tier-{{ tier }}">{{ tier_labels[tier][0] }} possible issues <span>({{ items | length }})</span></h2>
+  {% for issue, row in items %}
+  <article class="print-clause tier-{{ tier }}">
+    <h3>{{ row.ref }}{% if row.clause.heading %}, {{ row.clause.heading }}{% endif %}: {{ issue.title }} <span class="print-sev">{{ issue.citation }}</span></h3>
+    <p class="print-why">{{ issue.detail }}</p>
+    <p class="print-text">{{ row.clause.text }}</p>
+    <p class="print-why"><strong>Suggested wording:</strong> {{ issue.wording }}</p>
+  </article>
+  {% endfor %}
+  {% endfor %}
+
+  {% if view.manual_checks %}
+  <h2 class="print-tier">Check your app's screens too <span>({{ view.manual_checks | length }})</span></h2>
+  <ul class="print-checks">
+    {% for m in view.manual_checks %}<li><strong>{{ m.title }}</strong> ({{ m.citation }}): {{ m.what_it_means }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <footer class="print-footer">
+    {{ report.disclaimer }} This report comes from a keyword check of the document's wording against
+    LegalLens rulebook {{ report.rulebook_version }}; most DPDP Act duties apply from 13 May 2027.
+  </footer>
+</section>
+
+<script type="application/json" id="result-data">{{ result_data | tojson }}</script>
+{% endblock %}
