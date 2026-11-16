@@ -12,7 +12,7 @@
   <link rel="preload" href="{{ url_for('static', path='fonts/switzer-400.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ url_for('static', path='fonts/bricolage-grotesque-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="{{ url_for('static', path='favicon.svg') }}?v=2" type="image/svg+xml">
-  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=12">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=13">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -42,7 +42,7 @@
     <p>LegalLens gives compliance help from a keyword check against its rulebook. It is not legal advice; have a lawyer review critical findings.</p>
   </footer>
   {% endblock %}
-  <script src="{{ url_for('static', path='app.js') }}?v=15"></script>
+  <script src="{{ url_for('static', path='app.js') }}?v=16"></script>
   {% block scripts %}{% endblock %}
   {# Prerender a same-site page when the pointer rests on its link ("moderate"). Every link here is a
      plain GET of a page; audits are form POSTs, which are never prerendered. #}

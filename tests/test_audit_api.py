@@ -65,6 +65,41 @@ def test_bad_input_is_rejected(data, status, detail):
     assert detail in response.json()["detail"]
 
 
+GOAL_ERROR = "Choose what you need from this review: prelaunch, live or quick."
+GUIDANCE_KEYS = {"version", "goal", "label", "intro", "groups", "manage", "watch_out", "steps", "more", "total"}
+
+
+def test_audit_carries_guidance_for_the_default_goal():
+    result = _audit(text=(FIXTURES / "planted_violations.md").read_text(encoding="utf-8")).json()
+    assert result["guidance"]["goal"] == "live"
+
+
+@pytest.mark.parametrize("goal", ["prelaunch", "live", "quick"])
+def test_every_goal_returns_a_guidance_plan(goal):
+    response = _audit(text="1. You may nominate another person.", goal=goal)
+    assert response.status_code == 200
+    guidance = response.json()["guidance"]
+    assert set(guidance) == GUIDANCE_KEYS and guidance["goal"] == goal
+
+
+def test_quick_goal_shows_at_most_five_and_counts_the_rest():
+    guidance = _audit(text="1. We sell shoes.", goal="quick").json()["guidance"]
+    shown = sum(len(g["items"]) for g in guidance["groups"])
+    assert shown == 5 and guidance["more"] == guidance["total"] - shown > 0
+
+
+def test_unknown_goal_is_rejected():
+    response = _audit(text="Some policy.", goal="nope")
+    assert response.status_code == 400
+    assert response.json()["detail"] == GOAL_ERROR
+
+
+def test_unknown_goal_on_the_html_form_shows_the_message():
+    response = client.post("/audit", data={"text": "Some policy.", "goal": "nope"})
+    assert response.status_code == 400
+    assert GOAL_ERROR in response.text
+
+
 @pytest.fixture
 def fake_ai():
     def answer(kwargs):

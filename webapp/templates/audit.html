@@ -42,13 +42,67 @@
 </div>
 {% endif %}
 
+{% if plan and plan.goal %}
+{# The action plan: what to change (grouped by when), habits to keep and mistakes to avoid. Built only
+   from the missing-list and checklist parts below; each item links to its detail further down. #}
+<section class="missing plan screen-only" aria-labelledby="plan-title">
+  <h2 id="plan-title">Your action plan</h2>
+  <p class="section-intro">{{ plan.intro }}</p>
+  {% for group in plan.groups %}
+  <h3 class="plan-heading">{{ group.label }} <span class="filter-count">{{ group["items"] | length }}</span></h3>
+  <ol class="missing-list">
+    {% for item in group["items"] %}
+    <li class="missing-item">
+      <div class="missing-side">{{ tier_badge(item.tier, tier_labels) }}</div>
+      <div class="missing-main">
+        <p class="missing-title">{% if item.href %}<a href="{{ item.href }}">{{ item.action_label }}: {{ item.title }}</a>{% else %}{{ item.action_label }}: {{ item.title }}{% endif %}</p>
+        <p class="missing-cite">{{ citation(item) }}{% if item.refs %}<span>In {{ item.refs | join(", ") }}</span>{% endif %}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="section-intro">A keyword check found nothing to change. It can't confirm the wording is enough on its own.</p>
+  {% endfor %}
+  {% if plan.more %}<p class="section-intro">{{ plan.more }} more {{ "fix is" if plan.more == 1 else "fixes are" }} in the report below.</p>{% endif %}
+  {% if plan.steps %}
+  <h3 class="plan-heading">Alongside the fixes</h3>
+  <ul class="checklist">
+    {% for step in plan.steps %}<li><p class="check-desc">{{ step }}</p></li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% if plan.manage %}
+  <h3 class="plan-heading">Keep it in shape</h3>
+  <ul class="checklist">
+    {% for t in plan.manage %}
+    <li>
+      <p class="check-title">{{ t.title }}</p>
+      {% for point in t.points %}<p class="check-desc">{{ point }}</p>{% endfor %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if plan.watch_out %}
+  <h3 class="plan-heading">Watch out for</h3>
+  <ul class="checklist">
+    {% for t in plan.watch_out %}
+    <li>
+      <p class="check-title">{{ t.title }}</p>
+      {% for point in t.points %}<p class="check-desc">{{ point }}</p>{% endfor %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="missing screen-only" aria-labelledby="missing-title">
   <h2 id="missing-title">Missing clauses</h2>
   {% if view.missing %}
   <p class="section-intro">The law expects your policy to say these things, and no clause seems to. Most severe first.</p>
   <ol class="missing-list">
     {% for m in view.missing %}
-    <li class="missing-item">
+    <li class="missing-item" id="missing-{{ m.rule_id }}">
       <div class="missing-side">{{ tier_badge(m.tier, tier_labels) }}</div>
       <div class="missing-main">
         <h3 class="missing-title">{{ m.title }}</h3>
@@ -179,6 +233,24 @@
     </p>
     {% for line in view.status %}<p class="print-meta">{{ line }}</p>{% endfor %}
   </header>
+
+  {% if plan and plan.groups %}
+  <h2 class="print-tier">Action plan: {{ plan.label | lower }}</h2>
+  <p class="print-why">{{ plan.intro }}</p>
+  {% for group in plan.groups %}
+  <article class="print-clause">
+    <h3>{{ group.label }}</h3>
+    <ul>{% for item in group["items"] %}<li>{{ item.action_label }}: {{ item.title }} <span class="print-sev">{{ tier_labels[item.tier][0] }}, {{ item.citation }}{% if item.refs %}, in {{ item.refs | join(", ") }}{% endif %}</span></li>{% endfor %}</ul>
+  </article>
+  {% endfor %}
+  {% if plan.more %}<p class="print-why">{{ plan.more }} more {{ "fix is" if plan.more == 1 else "fixes are" }} listed below.</p>{% endif %}
+  {% for heading, entries in [("Keep it in shape", plan.manage), ("Watch out for", plan.watch_out)] if entries %}
+  <article class="print-clause">
+    <h3>{{ heading }}</h3>
+    <ul>{% for t in entries %}<li><strong>{{ t.title }}.</strong> {{ t.points | join(" ") }}</li>{% endfor %}</ul>
+  </article>
+  {% endfor %}
+  {% endif %}
 
   {% if view.missing %}
   <h2 class="print-tier">Missing clauses <span>({{ view.missing | length }})</span></h2>

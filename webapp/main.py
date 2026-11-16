@@ -14,10 +14,9 @@ import logging
 import re
 import time
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from io import BytesIO
-from typing import Callable
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -32,11 +31,11 @@ from starlette.formparsers import MultiPartParser
 from legallens import Assessment, Clause, assess, load_bytes, normalize_text, segment
 from legallens.compliance.audit import PARTIAL_REASONS, AuditInputError
 from legallens.compliance.audit import audit as run_audit
+from legallens.compliance.guidance import DEFAULT_GOAL, GOALS, build_guidance, default_guidance
 from legallens.compliance.llm import LLMChecker
 from legallens.compliance.report import AuditReport
 from legallens.compliance.rulebook import default_rulebook
-from legallens.webpage import FetchedPolicy, FetchError, display_url, fetch_policy
-from webapp.audit_view import TIER_LABELS, build_view, citation
+from webapp.audit_view import TIER_LABELS, build_view, citation, plan_view
 from webapp.landing_view import build_scan
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -88,11 +87,6 @@ def get_llm_checker() -> LLMChecker | None:
     return None
 
 
-def get_url_fetcher() -> Callable[[str], FetchedPolicy]:
-    """Fetches a policy from a web address (tests replace it, so pytest never touches the network)."""
-    return fetch_policy
-
-
 class InputError(Exception):
     def __init__(self, message: str, status_code: int = 400) -> None:
         super().__init__(message)
@@ -127,6 +121,7 @@ class AuditResult:
     report: AuditReport
     warnings: list[str]
     generated_at: str
+    guidance: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """The /api/audit response, also embedded in the results page for export."""
@@ -134,6 +129,7 @@ class AuditResult:
             "source": self.source,
             "generated_at": self.generated_at,
             **self.report.to_dict(),
+            "guidance": self.guidance,
             "warnings": self.warnings,
             "clauses": [c.to_dict() for c in self.clauses],
             "text": self.text,
@@ -164,14 +160,13 @@ def audit_page(
     text: str = Form(""),
     business_type: str = Form("app"),
     name: str = Form(""),
-    url: str = Form(""),
+    goal: str = Form(DEFAULT_GOAL),
     llm_checker: LLMChecker | None = Depends(get_llm_checker),
-    fetcher: Callable[[str], FetchedPolicy] = Depends(get_url_fetcher),
 ) -> Response:
     try:
-        result = _audit(file, text, business_type, "auto", llm_checker, name=name, url=url, fetcher=fetcher)
+        result = _audit(file, text, business_type, "auto", llm_checker, name=name, goal=goal)
     except InputError as exc:
-        form = {"text": text, "business_type": business_type, "url": url}
+        form = {"text": text, "business_type": business_type, "goal": goal}
         return _error(request, exc.message, exc.status_code, form=form)
     return templates.TemplateResponse(
         request,
@@ -179,6 +174,7 @@ def audit_page(
         {
             "result": result,
             "view": build_view(result.text, result.clauses, result.report),
+            "plan": plan_view(result.guidance, result.clauses),
             "tier_labels": TIER_LABELS,
             "generated_on": f"{date.today():%d %B %Y}".lstrip("0"),
             "long_clause_chars": LONG_CLAUSE_CHARS,
@@ -201,43 +197,22 @@ def audit_api(
     text: str = Form(""),
     business_type: str = Form("app"),
     mode: str = Form("auto"),
+    goal: str = Form(DEFAULT_GOAL),
     llm_checker: LLMChecker | None = Depends(get_llm_checker),
 ) -> dict:
     """Compliance audit: score, findings with citations, missing clauses and manual checks."""
     try:
-        return _audit(file, text, business_type, mode, llm_checker).to_dict()
-    except InputError as exc:
-        raise HTTPException(exc.status_code, exc.message) from exc
-
-
-@app.post("/api/audit-url")
-def audit_url_api(
-    url: str = Form(""),
-    business_type: str = Form("app"),
-    mode: str = Form("auto"),
-    llm_checker: LLMChecker | None = Depends(get_llm_checker),
-    fetcher: Callable[[str], FetchedPolicy] = Depends(get_url_fetcher),
-) -> dict:
-    """The same audit as /api/audit, for a policy the server fetches from a web address."""
-    if not url.strip():
-        raise HTTPException(400, "Enter the web address of your privacy policy or terms.")
-    try:
-        return _audit(None, "", business_type, mode, llm_checker, url=url, fetcher=fetcher).to_dict()
+        return _audit(file, text, business_type, mode, llm_checker, goal=goal).to_dict()
     except InputError as exc:
         raise HTTPException(exc.status_code, exc.message) from exc
 
 
 def _audit(file: UploadFile | None, pasted: str, business_type: str, mode: str,
-           llm_checker: LLMChecker | None, name: str = "", url: str = "",
-           fetcher: Callable[[str], FetchedPolicy] | None = None) -> AuditResult:
+           llm_checker: LLMChecker | None, name: str = "", goal: str = DEFAULT_GOAL) -> AuditResult:
+    if goal not in GOALS:
+        raise InputError("Choose what you need from this review: prelaunch, live or quick.")
     started = time.perf_counter()
-    notes: list[str] = []
-    if url.strip():
-        if (file is not None and file.filename) or pasted.strip():
-            raise InputError("Give a web address, a file or pasted text, one at a time.")
-        source, doc_text, size, notes = _read_url(url, fetcher or fetch_policy)
-    else:
-        source, doc_text, size = _read_input(file, pasted)
+    source, doc_text, size = _read_input(file, pasted)
     if name.strip() and source == "Pasted text":
         source = name.strip()[:120]  # a label for pasted text, e.g. the homepage sample
     if not doc_text.strip():
@@ -247,7 +222,7 @@ def _audit(file: UploadFile | None, pasted: str, business_type: str, mode: str,
         report = run_audit(doc_text, clauses, business_type=business_type, mode=mode, llm_checker=llm_checker)
     except AuditInputError as exc:
         raise InputError(str(exc), exc.status_code) from exc
-    warnings = notes + _warnings(doc_text, clauses)
+    warnings = _warnings(doc_text, clauses)
     if report.mode_reason:
         warnings.insert(0, PARTIAL_REASONS.get(report.mode_reason, "This is a keyword check only."))
     logger.info(
@@ -255,7 +230,8 @@ def _audit(file: UploadFile | None, pasted: str, business_type: str, mode: str,
         size, len(clauses), report.mode, report.mode_reason, time.perf_counter() - started,
     )
     generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return AuditResult(source, doc_text, clauses, report, warnings, generated_at)
+    guidance = build_guidance(report, goal)
+    return AuditResult(source, doc_text, clauses, report, warnings, generated_at, guidance)
 
 
 def _analyze(file: UploadFile | None, pasted: str) -> Analysis:
@@ -296,30 +272,6 @@ def _read_input(file: UploadFile | None, pasted: str) -> tuple[str, str, int]:
         text = normalize_text(pasted)
         size = len(pasted)
     return source, text, size
-
-
-def _read_url(url: str, fetcher: Callable[[str], FetchedPolicy]) -> tuple[str, str, int, list[str]]:
-    """Fetch a policy from the web and return (source label, normalized text, size, notes)."""
-    try:
-        fetched = fetcher(url)
-    except FetchError as exc:
-        raise InputError(exc.message, exc.status_code) from exc
-    if fetched.kind == "pdf":
-        _check_pdf(fetched.body)
-        try:
-            text = load_bytes(fetched.body, ".pdf")
-        except Exception as exc:  # pypdf raises many error types on malformed files
-            raise InputError("This PDF could not be read. It may be damaged or encrypted.") from exc
-        size = len(fetched.body)
-    else:
-        text, size = fetched.text, len(fetched.text)
-    notes = []
-    if fetched.found_from:
-        notes.append(
-            f"LegalLens followed the policy link on {display_url(fetched.found_from) or fetched.found_from} "
-            f"to {display_url(fetched.url)}. If that isn't the right document, link to it directly."
-        )
-    return display_url(fetched.url) or "Web page", text, size, notes
 
 
 def _check_pdf(data: bytes) -> None:
@@ -441,6 +393,7 @@ def _index_context() -> dict:
         "laws": LAW_TABLE,
         "rule_card": RULE_CARD,
         "business_types": BUSINESS_TYPES,
+        "goals": [(g.key, g.label, g.hint) for g in default_guidance().goals],
         "rulebook_version": default_rulebook().version,
     }
 
@@ -451,13 +404,11 @@ RULE_CARD = _rule_card()
 
 
 def _error(request: Request, message: str, status_code: int, form: dict | None = None) -> Response:
-    """JSON for the API; for the web form, the homepage again with the message beside the form that
-    was used (the address box in the hero, or the upload form) and what the visitor entered kept."""
+    """JSON for the API; for the web form, the homepage again with the message beside the upload
+    form and what the visitor entered kept."""
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": message}, status_code=status_code)
-    form = form or {}
-    origin = "url" if form.get("url", "").strip() else "upload"
-    context = {**_index_context(), "error": message, "error_origin": origin, "form": form}
+    context = {**_index_context(), "error": message, "form": form or {}}
     return templates.TemplateResponse(request, "index.html", context, status_code=status_code)
 
 

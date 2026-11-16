@@ -46,9 +46,12 @@ def test_index_shows_the_audit_form():
     assert "discarded" in page  # the privacy promise still holds: keyword mode sends nothing anywhere
     assert re.findall(r'name="business_type" value="(\w+)"', page) == ["app", "ecommerce", "marketplace"]
     assert 'value="app" checked' in page
-    # The hero's scan box takes a web address (POST /audit with url); the page is dark only, so no toggle.
-    assert re.search(r'<form class="scan-form[^"]*" id="scan-form" action="[^"]*/audit" method="post"', page)
-    assert 'name="url" type="text" inputmode="url"' in page
+    assert re.findall(r'name="goal" value="(\w+)"', page) == ["prelaunch", "live", "quick"]
+    assert 'name="goal" value="live" checked' in page
+    # The hero has no address box: its row picks the upload form's file, then sends the visitor to the form.
+    assert 'name="url"' not in page
+    assert '<label class="scan-pick" for="file-input">' in page and 'id="scan-go"' in page
+    # The page is dark only, so no toggle.
     assert 'id="theme-toggle"' not in page
 
 
@@ -270,7 +273,7 @@ def test_audit_page_lists_missing_clauses_with_wording():
     page = _audit_page(SAMPLE_TEXT).text
     result = client.post("/api/audit", data={"text": SAMPLE_TEXT}).json()
     missing = _section(page, 'id="missing-title"', "</section>")
-    assert missing.count('<li class="missing-item">') == len(result["missing"]) == 10
+    assert missing.count('<li class="missing-item" id="missing-') == len(result["missing"]) == 10
     # Most severe first: the children's-data rule is the only critical one.
     assert missing.index("Children (under 18) need verifiable parental consent") < missing.index("Explains the right to nominate someone")
     assert "DPDP Act s.9(1)" in missing and "Checked against the official text" in missing
@@ -308,9 +311,9 @@ def test_print_report_lists_missing_issues_and_checks():
     report = page[page.index('<section class="print-report">') :]
     assert "LegalLens compliance audit" in report
     assert re.findall(r'<h2 class="print-tier[^"]*">([^<]+)', report) == [
-        "Missing clauses ", "Critical possible issues ", "Major possible issues ", "Check your app's screens too ",
+        "Action plan: fixing a live policy", "Missing clauses ", "Critical possible issues ", "Major possible issues ", "Check your app's screens too ",
     ]
-    assert report.count('<article class="print-clause') == 10 + 6  # missing clauses, then each possible issue
+    assert report.count('<article class="print-clause tier-') == 10 + 6  # missing clauses, then each possible issue
     assert "compliance assistance, not legal advice" in report
 
 
@@ -348,19 +351,36 @@ def test_a_failed_upload_keeps_the_input_and_shows_the_error_by_the_form():
     assert 'class="scan-error"' not in page
 
 
-def test_a_failed_address_shows_the_error_in_the_hero_and_keeps_the_address():
-    response = client.post("/audit", data={"url": "http://127.0.0.1:8765/"})
-    assert response.status_code == 400
-    assert 'class="scan-error" role="alert"' in response.text
-    assert 'value="http://127.0.0.1:8765/"' in response.text
-    assert 'id="upload-error" role="alert" tabindex="-1"></p>' in response.text
-
-
 def test_the_business_type_choice_survives_an_error():
     response = _audit_page("", business_type="marketplace")
     form = _section(response.text, 'id="upload-form"', "</form>")
     assert re.search(r'value="marketplace" checked', form)
     assert not re.search(r'value="app" checked', form)
+
+
+def test_the_goal_choice_survives_an_error():
+    response = _audit_page("", goal="quick")
+    form = _section(response.text, 'id="upload-form"', "</form>")
+    assert 'name="goal" value="quick" checked' in form
+    assert 'name="goal" value="live" checked' not in form
+
+
+def test_audit_page_shows_the_action_plan_for_the_goal():
+    page = _audit_page(SAMPLE_TEXT, goal="quick").text
+    plan = _section(page, 'id="plan-title"', "</section>")
+    assert "Do these first" in plan
+    assert 1 <= plan.count('<li class="missing-item">') <= 5
+    # Each item links to its detail: a missing clause below, or the flagged clause in the document.
+    hrefs = re.findall(r'<a href="#([^"]+)">', plan)
+    assert hrefs and all(f'id="{h}"' in page for h in hrefs)
+    assert "Watch out for" in plan and "Keep it in shape" not in plan
+
+
+def test_the_live_plan_groups_fixes_by_when():
+    page = _audit_page(SAMPLE_TEXT).text
+    plan = _section(page, 'id="plan-title"', "</section>")
+    assert "Fix now" in plan or "Before " in plan
+    assert "Keep it in shape" in plan and "Alongside the fixes" in plan
 
 
 def test_pages_carry_the_new_mark_and_tab_icon():

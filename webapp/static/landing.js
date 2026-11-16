@@ -229,25 +229,43 @@
     ro.observe(redline);
   }
 
-  // ---------- The scan box: say it's working ----------
-  const form = $("#scan-form");
-  form.addEventListener("submit", () => {
-    const b = $("button[type=submit]", form);
-    b.textContent = "Scanning…"; b.setAttribute("aria-busy", "true");
+  // ---------- The scan box: pick the file here, answer the two questions in the form below ----------
+  // The hero has no form of its own: it fills the upload form's #file-input, then scrolls there.
+  const fileInput = $("#file-input");
+  const pick = $(".scan-pick");
+  const pickName = $("#scan-file-name");
+  const scanGo = $("#scan-go");
+  let fromHero = false;
+  const toForm = () => {
+    const target = $("input[name=goal]:checked") || $("#submit-button");
+    const done = () => target && target.focus({ preventScroll: true });
+    if (lenis) lenis.scrollTo("#audit", { offset: -24, duration: 1.2, onComplete: done });
+    else { $("#audit").scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); done(); }
+  };
+  const showPick = () => {
+    const file = fileInput.files && fileInput.files[0];
+    pick.classList.toggle("has-file", Boolean(file));
+    pickName.textContent = file ? file.name : pickName.dataset.empty;
+  };
+  pick.addEventListener("click", () => { fromHero = true; });
+  scanGo.addEventListener("click", () => {
+    if (fileInput.files && fileInput.files.length) toForm();
+    else { fromHero = true; fileInput.click(); }
   });
-  addEventListener("pageshow", (e) => {
-    if (!e.persisted) return;
-    const b = $("button[type=submit]", form);
-    b.textContent = "Scan it free"; b.removeAttribute("aria-busy"); b.disabled = false;
+  fileInput.addEventListener("change", () => {
+    showPick();
+    if (fromHero && fileInput.files.length) toForm();
+    fromHero = false;
   });
+  fileInput.addEventListener("cancel", () => { fromHero = false; });
+  addEventListener("pageshow", showPick);
 
   // ---------- Playback ----------
   let lenis = null;
   $$("[data-rescan]").forEach((a) => a.addEventListener("click", (e) => {
     e.preventDefault();
-    const input = $("#policy-url");
-    if (lenis) lenis.scrollTo(0, { duration: 1.4, onComplete: () => input.focus() });
-    else { scrollTo(0, 0); input.focus(); }
+    if (lenis) lenis.scrollTo(0, { duration: 1.4, onComplete: () => scanGo.focus() });
+    else { scrollTo(0, 0); scanGo.focus(); }
   }));
   function start() {
     build(); drawDither();

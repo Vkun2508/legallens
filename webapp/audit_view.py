@@ -55,6 +55,24 @@ def _rule_view(rule: dict) -> dict:
     }
 
 
+def plan_view(guidance: dict, clauses: list[Clause]) -> dict:
+    """The action plan for the page: each item gets its colour slot, its citation, the clauses it is
+    in, and a link to its detail further down (the missing clause, or the first flagged clause)."""
+    by_index = {c.index: c for c in clauses}
+    groups = []
+    for group in guidance.get("groups", []):
+        items = []
+        for item in group["items"]:
+            indexes = [i for i in item["clause_indexes"] if i in by_index]
+            if item["action"] == "add":
+                href = f"#missing-{item['rule_id']}"
+            else:
+                href = f"#clause-{indexes[0]}" if indexes else None
+            items.append({**_rule_view(item), "refs": [clause_ref(by_index[i]) for i in indexes], "href": href})
+        groups.append({**group, "items": items})
+    return {**guidance, "groups": groups}
+
+
 def _segments(text: str, clause: Clause, issues: list[dict]) -> list[dict]:
     """The clause's span split around its issues' evidence, each match labelled with its rule."""
     spans = []

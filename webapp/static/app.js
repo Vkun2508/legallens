@@ -407,9 +407,25 @@
         ", generated " + result.generated_at.slice(0, 10) + ".",
       "Review every suggestion before using it. " + result.disclaimer,
       "",
-      "## Your policy, with notes",
-      "",
     ];
+    var plan = result.guidance;
+    if (plan && plan.groups && plan.groups.length) {
+      out.push("## Action plan: " + plan.label.toLowerCase(), "", plan.intro, "");
+      plan.groups.forEach(function (g) {
+        out.push("### " + g.label, "");
+        g.items.forEach(function (i) {
+          out.push("- [ ] " + i.action_label + ": " + i.title + " (" + citation(i) + ", " + i.severity + ")");
+        });
+        out.push("");
+      });
+      [["Keep it in shape", plan.manage], ["Watch out for", plan.watch_out]].forEach(function (pair) {
+        if (!pair[1].length) return;
+        out.push("### " + pair[0], "");
+        pair[1].forEach(function (t) { out.push("- **" + t.title + ".** " + t.points.join(" ")); });
+        out.push("");
+      });
+    }
+    out.push("## Your policy, with notes", "");
     var pos = 0;
     result.clauses.slice().sort(function (a, b) { return a.start - b.start; }).forEach(function (c) {
       var between = result.text.slice(pos, c.start).trim();

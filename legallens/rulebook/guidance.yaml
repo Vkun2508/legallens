@@ -1,0 +1,189 @@
+# What to do after an audit: the action plan for small businesses and startups.
+#
+# The audit says what is missing or possibly wrong. This file turns that into a plan:
+#   change    - which rules to act on, grouped by when (built from the report, ordered by severity)
+#   manage    - habits that keep each topic in shape after the policy is fixed
+#   watch_out - common mistakes, mostly from copied templates
+#
+# Every rulebook rule id belongs to exactly one topic (checked when the file loads).
+# Wording rules: plain words for a founder with no lawyer; no legal figures (deadlines, penalties,
+# response times) unless a rule's verified quote states them; dates come from the rulebook's
+# `in_force_from`, never typed in here ({date} is filled in by the code).
+version: "2026.11-guidance.1"
+
+actions:
+  add: Add a clause
+  reword: Reword
+  check: Check the wording
+
+goals:
+  - key: prelaunch
+    label: Writing our first policy
+    hint: Not launched yet. Build it right first time.
+    intro: >-
+      You haven't launched yet, so this is the cheapest moment to get it right. Add every missing
+      clause, and set up the habits below before your first customer signs up.
+    groups:
+      - key: before_launch
+        label: Before you launch
+      - key: after_launch
+        label: Soon after launch
+    steps:
+      - Publish the policy where people see it before they sign up or pay, and link to it from your sign-up and checkout screens.
+      - Decide who answers privacy questions and complaints, and give them a working email address before launch.
+      - Write down what personal data you collect, where it is stored and which tools (payments, analytics, email) receive it. Your policy should match that list.
+      - Have a lawyer read anything marked critical before launch. This is a keyword check, not legal advice.
+
+  - key: live
+    label: Fixing a live policy
+    hint: Customers already use it. Fix by priority.
+    intro: >-
+      Customers already rely on this policy. Fix what the law requires today first, then what the
+      DPDP Act will require from its start date, and tell your users when the policy changes.
+    groups:
+      - key: now
+        label: Fix now
+      - key: before_in_force
+        label: Before {date}
+      - key: next_update
+        label: At your next update
+    steps:
+      - Date every version of the policy and keep the old ones, so you can show what people agreed to and when.
+      - When you change the policy, tell existing users what changed, by email or an in-app notice.
+      - If you start using data for a new purpose, ask for consent to that purpose. Consent given for one purpose doesn't cover another.
+      - Check the policy still matches your product whenever you add a feature, a tool that receives user data, or a new market.
+
+  - key: quick
+    label: Quick check-up
+    hint: Just the top risks and next steps.
+    intro: >-
+      The few things worth doing first. The full report is below when you have more time.
+    groups:
+      - key: first
+        label: Do these first
+    steps: []
+
+topics:
+  - key: notice
+    title: What your privacy notice tells people
+    rules:
+      - dpdp.notice.data_and_purpose
+      - dpdp.notice.withdrawal_means
+      - dpdp.notice.board_complaint
+      - dpdp.notice.language
+      - dpdp.cross_border.disclosure
+    manage:
+      - Keep a simple list of every piece of personal data you collect and why. Update the policy whenever the list changes.
+      - Each time you add a tool that receives user data (analytics, payments, email, cloud storage), check the policy covers it, including whether the data leaves India.
+    watch_out:
+      - Vague lines like "we may collect information to improve our services" don't tell people what you collect or why. List each item and its purpose.
+      - A policy copied from another company describes their data, not yours, and can promise things you don't do.
+
+  - key: consent
+    title: Consent
+    rules:
+      - dpdp.consent.invalid
+      - dpdp.consent.withdrawal_ease
+      - dpdp.consent.stop_after_withdrawal
+      - dpdp.basis.legitimate_interest
+      - ecom.pre_ticked_consent
+    manage:
+      - Keep a record of when each person gave consent, to which version of the policy and for which purpose.
+      - Put the option to withdraw consent where people gave it (the same screen or the settings page), and make sure withdrawing actually stops the processing.
+    watch_out:
+      - '"By using this site you agree" and pre-ticked boxes are not valid consent. People need to take a clear action, such as ticking an empty box.'
+      - '"Legitimate interests" comes from Europe''s GDPR. The DPDP Act doesn''t recognise it, so a policy built on a European template needs rewriting.'
+
+  - key: security_breach
+    title: Security and data breaches
+    rules:
+      - dpdp.fiduciary.security
+      - dpdp.fiduciary.breach_intimation
+      - dpdp.fiduciary.breach_disclaimer
+    manage:
+      - Write a one-page breach plan that says who decides something is a breach, and who tells the Data Protection Board and the people affected.
+      - Review who on the team and which tools can see personal data, and remove access people no longer need.
+    watch_out:
+      - Saying you aren't responsible for breaches doesn't remove your duty to protect the data, and it reads badly to users and investors.
+      - Don't promise security you don't have. Describe the safeguards you actually use.
+
+  - key: retention
+    title: Keeping and deleting data
+    rules:
+      - dpdp.fiduciary.erasure
+      - dpdp.fiduciary.indefinite_retention
+      - dpdp.fiduciary.accuracy
+    manage:
+      - Decide how long you keep each kind of data, and delete it on a schedule once its purpose is served or consent is withdrawn.
+      - Keep only what another law makes you keep, such as invoices for tax, and say so in the policy.
+      - Give people a way to correct their details, so the data you rely on stays accurate.
+    watch_out:
+      - Keeping data "indefinitely" or "as long as we see fit" goes against the duty to erase it once its purpose is served.
+      - Deleting from your app isn't enough if copies sit in backups, spreadsheets or third-party tools. Include those in your clean-up.
+
+  - key: rights_grievance
+    title: User rights and complaints
+    rules:
+      - dpdp.fiduciary.contact
+      - dpdp.fiduciary.grievance
+      - dpdp.rights.access
+      - dpdp.rights.correction_erasure
+      - dpdp.rights.nomination
+    manage:
+      - Name a person or a shared inbox that answers privacy requests, and check it every week.
+      - Keep a simple log of each request, recording who asked, what for and when you replied.
+      - Publish your response period, and stick to it.
+    watch_out:
+      - A contact address nobody reads is no contact at all when someone complains.
+      - People can ask for a summary of their data and who you shared it with. Know where that information lives before the first request arrives.
+
+  - key: children
+    title: Children's data
+    rules:
+      - dpdp.children.parental_consent
+      - dpdp.children.tracking_ads
+    manage:
+      - If anyone under 18 could use your product, decide how you'll check age and get a parent's consent before collecting their data.
+      - Turn off behavioural tracking and targeted ads for accounts that belong to children.
+    watch_out:
+      - Under the DPDP Act a child is anyone under 18, not under 13 as in many US templates.
+      - Ed-tech, gaming and social apps attract young users even when they aren't aimed at them.
+
+  - key: store_terms
+    title: Selling online
+    rules:
+      - ecom.entity_details
+      - ecom.grievance_officer
+      - ecom.returns_refunds
+      - ecom.seller_info
+      - ecom.one_sided_cancellation_charges
+    manage:
+      - Keep your legal name, address and customer-care contacts the same everywhere, in the website footer, on invoices and in the policy.
+      - Name a grievance officer, publish their contact details, and track every complaint until it's closed.
+      - When your return or refund terms change, update them on the site before they apply to new orders.
+    watch_out:
+      - Charging buyers to cancel, when you don't bear the same charge if you cancel on them, is not allowed.
+      - On a marketplace, buyers must be able to see who the seller is before they buy.
+
+  - key: dark_patterns
+    title: Dark patterns in your terms and screens
+    rules:
+      - dark.subscription_trap
+      - dark.saas_billing
+      - dark.drip_pricing
+      - dark.forced_action
+      - dark.bait_and_switch
+      - dark.false_urgency
+      - dark.basket_sneaking
+      - dark.confirm_shaming
+      - dark.interface_interference
+      - dark.disguised_ads
+      - dark.nagging
+      - dark.trick_question
+      - dark.rogue_malware
+    manage:
+      - Before each release, go through sign-up, checkout and cancellation as a new customer would, and look for the patterns listed under "Check your app's screens too".
+      - Show the full price, fees included, from the first screen, and make cancelling as easy as subscribing.
+    watch_out:
+      - Auto-renewals with no reminder, fees added at checkout and cancel links buried in settings are all named dark patterns.
+      - Countdown timers and "only a few left" messages must be true.

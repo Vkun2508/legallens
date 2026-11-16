@@ -110,8 +110,12 @@ main.landing-main { padding: 0; }
 .scan-line > span { display: block; }
 .scan-lede { margin: clamp(20px, 3.2vh, 36px) 0 0; font-size: clamp(17px, 1.3vw, 19px); max-width: 30em; }
 .scan-form { margin-top: clamp(18px, 3vh, 28px); max-width: 540px; }
-.scan-form label { display: block; font-size: 14px; color: var(--scan-muted); margin-bottom: 8px; }
+.scan-label { display: block; font-size: 14px; color: var(--scan-muted); margin: 0 0 8px; }
 .scan-row { display: flex; background: var(--scan-surface); }
+.scan-row .scan-pick { flex: 1; min-width: 0; display: flex; align-items: center; height: 56px; margin: 0; padding: 0 16px; cursor: pointer;
+  color: #7D807C; font: 400 17px var(--scan-text); transition: color 150ms var(--scan-ease); }
+.scan-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-row .scan-pick:hover, .scan-pick.has-file { color: var(--scan-ink); }
 .scan-row input { flex: 1; min-width: 0; height: 56px; border: 0; border-radius: 0; background: transparent; color: var(--scan-ink); padding: 0 16px; font: 400 17px var(--scan-text); }
 .scan-row input::placeholder { color: #7D807C; }
 .scan-row input:focus { outline: none; }
@@ -196,7 +200,7 @@ html:not(.js) .scan-card.is-flag mark.major { background: var(--scan-major-tint)
 
 /* ---------- Reduced motion: every state still changes, instantly ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .scan-card mark, .scan-row button, .scan-btn { transition: none; }
+  .scan-card mark, .scan-row button, .scan-btn, .scan-row .scan-pick { transition: none; }
 }
 /* Where the scan doesn't play (reduced motion, or no JS) the hero rests on the read sheet beside the
    headline; the score is in the case-file bar, and the sample report is in the navigation. */

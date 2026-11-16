@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0A0B0D">
   <link rel="preload" href="{{ url_for('static', path='fonts/bricolage-grotesque-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ url_for('static', path='fonts/switzer-400.woff2') }}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{{ url_for('static', path='landing.css') }}?v=17">
+  <link rel="stylesheet" href="{{ url_for('static', path='landing.css') }}?v=18">
 {% endblock %}
 {% block masthead %}
   <header class="scan-nav">
@@ -75,18 +75,19 @@
   </div>
 
   <div class="scan-copy">
-    {% if error and error_origin == "url" %}<p class="scan-error" role="alert"><strong>This policy couldn't be audited.</strong> {{ error }}</p>{% endif %}
     <h1 id="hero-title"><span class="scan-line"><span>What's missing from</span></span> <span class="scan-line"><span>your privacy policy?</span></span></h1>
     <p class="scan-lede">LegalLens checks your privacy policy or terms against the DPDP Act and Rules, the E-Commerce Rules and the dark-pattern guidelines. It finds the required clauses that aren't there, and flags risky wording with the section behind it.</p>
     <p class="scan-lede scan-lede-short">Checked against the DPDP Act and Rules, the E-Commerce Rules and the dark-pattern guidelines: the required clauses that aren't there, and risky wording with its section.</p>
-    <form class="scan-form js-analyze-form" id="scan-form" action="{{ url_for('audit_page') }}" method="post" enctype="multipart/form-data">
-      <label for="policy-url">Your policy's web address</label>
+    {# The hero picks the file for the upload form below (#file-input), then takes the visitor there to
+       answer its two questions. The label works without JS; the button is the keyboard path. #}
+    <div class="scan-form" id="scan-form">
+      <p class="scan-label">Your privacy policy or terms</p>
       <div class="scan-row">
-        <input id="policy-url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="yourstartup.in/privacy" value="{{ form.url if form else '' }}" required>
-        <button type="submit">Scan it free</button>
+        <label class="scan-pick" for="file-input"><span id="scan-file-name" data-empty="Choose a PDF, .txt or .md file">Choose a PDF, .txt or .md file</span></label>
+        <button type="button" id="scan-go" aria-describedby="scan-file-name">Scan it free</button>
       </div>
-    </form>
-    <p class="scan-alt">Or <a href="#audit">paste the text</a> or <a href="#audit">upload a PDF</a>. A keyword check, not legal advice.</p>
+    </div>
+    <p class="scan-alt">Or <a href="#audit">paste the text</a>. A keyword check, not legal advice.</p>
   </div>
 
   <div class="scan-result">
@@ -220,7 +221,7 @@
 <section class="ll-audit" id="audit" aria-labelledby="audit-title">
   <div class="ll-audit-head">
     <h2 id="audit-title">Audit a policy</h2>
-    <p>Your privacy policy or terms: a PDF with selectable text, a .txt or a .md file, up to {{ max_mb }} MB and {{ max_pages }} pages. Or paste the text. To scan a web page, use the address box at the top.</p>
+    <p>Your privacy policy or terms: a PDF with selectable text, a .txt or a .md file, up to {{ max_mb }} MB and {{ max_pages }} pages. Or paste the text. Answer the two questions, and the report comes with a plan for what to do next.</p>
   </div>
 
   <form class="upload-form js-analyze-form" id="upload-form" action="{{ url_for('audit_page') }}" method="post" enctype="multipart/form-data">
@@ -231,6 +232,19 @@
         {% for value, label, hint in business_types %}
         <label class="choice-option">
           <input type="radio" name="business_type" value="{{ value }}"{% if value == chosen %} checked{% endif %}>
+          <span><span class="choice-label">{{ label }}</span> <span class="hint">{{ hint }}</span></span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset class="choice">
+      <legend class="field-label">What do you need from this review?</legend>
+      <div class="choice-options">
+        {% set chosen_goal = form.goal if form and form.goal else "live" %}
+        {% for value, label, hint in goals %}
+        <label class="choice-option">
+          <input type="radio" name="goal" value="{{ value }}"{% if value == chosen_goal %} checked{% endif %}>
           <span><span class="choice-label">{{ label }}</span> <span class="hint">{{ hint }}</span></span>
         </label>
         {% endfor %}
@@ -265,7 +279,7 @@
       <button type="submit" class="button button-primary" id="submit-button">Audit this policy</button>
     </div>
     {# Filled by the server after a failed audit, or by app.js when nothing was chosen. #}
-    <p class="form-error" id="upload-error" role="alert" tabindex="-1">{% if error and error_origin == "upload" %}<strong>This policy couldn't be audited.</strong> {{ error }}{% endif %}</p>
+    <p class="form-error" id="upload-error" role="alert" tabindex="-1">{% if error %}<strong>This policy couldn't be audited.</strong> {{ error }}{% endif %}</p>
   </form>
 
   <div class="loading" id="loading" hidden>
@@ -329,5 +343,5 @@
   <script src="{{ url_for('static', path='vendor/gsap.min.js') }}" defer></script>
   <script src="{{ url_for('static', path='vendor/ScrollTrigger.min.js') }}" defer></script>
   <script src="{{ url_for('static', path='vendor/lenis.min.js') }}" defer></script>
-  <script src="{{ url_for('static', path='landing.js') }}?v=17" defer></script>
+  <script src="{{ url_for('static', path='landing.js') }}?v=18" defer></script>
 {% endblock %}
