@@ -85,7 +85,7 @@ Self-hosted, with no third-party requests: Bricolage Grotesque (SIL Open Font Li
 - **Audit** (Pattern 2, Detail/Record):
   1. **Header:** document name, the score, three status sentences, and actions (Print report, Download draft fixes, Audit another policy).
   2. **Keyword-check banner.**
-  3. **Missing clauses,** most severe first.
+  3. **Action plan, then missing clauses.** The action plan follows the review goal (first policy, live policy, quick check-up): fixes grouped by when, each linking to its detail below, then "Alongside the fixes", "Keep it in shape" and "Watch out for". It is built from the missing-list and screens-checklist parts, with no new component. Missing clauses follow, most severe first.
   4. **"How to read these results".**
   5. **Toolbar:** sticky from 768px; severity filters, fold toggle, issue navigation.
   6. **Reader:** the minimap rail and the sheet.
@@ -149,7 +149,7 @@ static. The homepage's motion (the scan, the marking beat) is in `docs/DIRECTION
   - what it means
   - a good-practice note in `--ink-2`, where the law sets a duty rather than wording
   - the suggested wording
-- **Business-type choice:** radio options as 44px bordered targets. The selected one takes a `--lens` border and `--lens-tint`.
+- **Business-type and review-goal choices:** radio options as 44px bordered targets. The selected one takes a `--lens` border and `--lens-tint`.
 - **Screens checklist:** ruled items in an auto-fit grid: title, citation, what to look for.
 - **Annotated document (audit):**
   - **Text:** clause text in Switzer. A clause with a possible issue carries a 3px rule in the colour of its most severe issue, and evidence is underlined 2px in the tier colour.
@@ -160,7 +160,7 @@ static. The homepage's motion (the scan, the marking beat) is in `docs/DIRECTION
 - **Spotlight:** the current clause gets `--current`, a 3px lens rule and tinted evidence. Keys: `j`/`k` move between flags (ignored while typing), Esc clears.
 - **Minimap rail:** one tick per row, as tall as the row and coloured by tier. A lens-outlined window shows the visible part. It is mouse-only (`aria-hidden`); the brief's links and Previous/Next are the keyboard path.
 - **Print report:**
-  - **Contents:** the score and status, missing clauses with wording, possible issues by severity with the clause text, the screens checklist, and the disclaimer with the rulebook version.
+  - **Contents:** the score and status, the action plan, missing clauses with wording, possible issues by severity with the clause text, the screens checklist, and the disclaimer with the rulebook version.
   - **Style:** ink on white, headings in Bricolage.
 
 ## Imagery and icons

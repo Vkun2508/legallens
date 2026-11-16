@@ -20,8 +20,9 @@ FIRST VIEW  1440: the headline "Is your privacy policy DPDP-ready?" in two conde
             and the scan box on the left; Kettle's sheet tilted in 3D on the right, scanning; the
             case-file bar along the bottom. 375: the headline, lede and scan box, then the sheet,
             which plays when it scrolls into view.
-LIVE THING  The scan box: a web address (POST /audit with url, through /api/audit-url's fetcher), or
-            paste or upload below. Fallback without JS: the plain form post.
+LIVE THING  The scan box: a file picker (a label for the upload form's #file-input). Once a file is
+            chosen it scrolls to the form's two questions; paste text there instead. Without JS the
+            label still opens the picker.
 SIGNATURE   One GSAP timeline, scrubbed by the pinned scroll on desktop (Lenis):
             1. The sheet tilts in and drifts up through a fixed beam.
             2. Flagged clauses lift off with their section, and slots open.
