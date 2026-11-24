@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from markupsafe import escape
 from starlette.formparsers import MultiPartParser
 
 from pdf_builder import build_pdf
@@ -47,7 +48,7 @@ def test_index_shows_the_audit_form():
     assert re.findall(r'name="business_type" value="(\w+)"', page) == ["app", "ecommerce", "marketplace"]
     assert 'value="app" checked' in page
     assert re.findall(r'name="goal" value="(\w+)"', page) == ["prelaunch", "live", "quick"]
-    assert 'name="goal" value="live" checked' in page
+    assert 'name="goal" value="quick" checked' in page  # the free option, where "Scan it free" lands
     # The hero has no address box: its row picks the upload form's file, then sends the visitor to the form.
     assert 'name="url"' not in page
     assert '<label class="scan-pick" for="file-input">' in page and 'id="scan-go"' in page
@@ -116,12 +117,22 @@ def test_index_shows_the_deadline_pricing_and_questions():
     deadline = _section(page, 'id="deadline-title"', "</section>")
     assert re.search(r'<span class="ll-days">\d+ days</span> <span class="ll-until">until 13 May 2027</span>', deadline)
     pricing = _section(page, 'id="pricing-title"', "</section>")
-    assert "Your first scan is free" in pricing
-    assert re.findall(r'<dd class="ll-plan-price">([^<]+)', pricing) == ["₹0", "about ₹4,999 ", "about ₹1,999 "]
+    assert "Your first three check-ups are free" in pricing
+    # Cheapest first: three free quick check-ups, then Monitoring; the full reviews are the Full audit report.
+    assert re.findall(r"<dt>([^<]+)</dt>", pricing) == ["Quick check-up", "Monitoring", "Full audit report"]
+    assert re.findall(r'<dd class="ll-plan-price">([^<]+)', pricing) == ["₹0 ", "about ₹1,999 ", "about ₹4,999 "]
     assert "Paid plans open after launch" in pricing  # pre-launch: no claim that they can be bought today
+    assert "until then every review is free" in pricing
     faq = _section(page, 'id="faq-title"', "</section>")
     assert "Is this legal advice?" in faq and "never violations" in faq
     assert '<p class="ll-footer-name" aria-hidden="true">LegalLens</p>' in page
+
+
+def test_review_options_name_their_plan_and_the_free_one_is_preselected():
+    form = _section(client.get("/").text, 'id="upload-form"', "</form>")
+    assert 'name="goal" value="quick" checked' in form
+    assert form.count('<span class="hint choice-plan">In the Full audit report</span>') == 2
+    assert '<span class="hint choice-plan">Free for your first 3, then Monitoring</span>' in form
 
 
 def test_index_lists_the_laws_from_the_rulebook():
@@ -269,18 +280,24 @@ def test_audit_page_header_shows_estimated_score_and_status():
     assert "AI review" not in page  # the free product never talks about a feature it doesn't run
 
 
-def test_audit_page_lists_missing_clauses_with_wording():
+def test_audit_page_lists_each_missing_clause_once_in_the_plan():
     page = _audit_page(SAMPLE_TEXT).text
     result = client.post("/api/audit", data={"text": SAMPLE_TEXT}).json()
-    missing = _section(page, 'id="missing-title"', "</section>")
-    assert missing.count('<li class="missing-item" id="missing-') == len(result["missing"]) == 10
+    # One part: the action plan is the only list of clauses to add, each with its detail in place.
+    assert 'id="missing-title"' not in page
+    plan = _section(page, 'id="plan-title"', "</section>")
+    assert plan.count('<li class="missing-item" id="missing-') == len(result["missing"]) == 10
     # Most severe first: the children's-data rule is the only critical one.
-    assert missing.index("Children (under 18) need verifiable parental consent") < missing.index("Explains the right to nominate someone")
-    assert "DPDP Act s.9(1)" in missing and "Checked against the official text" in missing
-    assert "Good practice: the law sets this duty" in missing
-    assert missing.count('<details class="wording">') == 10
+    assert plan.index("Children (under 18) need verifiable parental consent") < plan.index("Explains the right to nominate someone")
+    assert "DPDP Act s.9(1)" in plan and "Checked against the official text" in plan
+    assert "Good practice: the law sets this duty" in plan
+    assert plan.count('<details class="wording">') == 10
     # Without JS the wording is still there to select; the copy button is revealed by app.js.
-    assert 'class="button button-small copy-button" data-copy="wording-missing-1" hidden' in missing
+    assert 'class="button button-small copy-button" data-copy="wording-missing-dpdp.children.parental_consent" hidden' in plan
+    screen = page[: page.index('<section class="print-report">')]
+    for m in result["missing"]:
+        assert screen.count(f'id="missing-{m["rule_id"]}"') == 1
+        assert screen.count(str(escape(m["title"]))) == 1
 
 
 def test_audit_page_margin_notes_cite_the_law():
@@ -311,18 +328,20 @@ def test_print_report_lists_missing_issues_and_checks():
     report = page[page.index('<section class="print-report">') :]
     assert "LegalLens compliance audit" in report
     assert re.findall(r'<h2 class="print-tier[^"]*">([^<]+)', report) == [
-        "Action plan: fixing a live policy", "Missing clauses ", "Critical possible issues ", "Major possible issues ", "Check your app's screens too ",
+        "Action plan: fixing a live policy", "Critical possible issues ", "Major possible issues ", "Check your app's screens too ",
     ]
-    assert report.count('<article class="print-clause tier-') == 10 + 6  # missing clauses, then each possible issue
+    assert report.count('<article class="print-clause tier-') == 6  # each possible issue
+    # The plan carries the wording for each of the 10 clauses to add; the issues carry their own.
+    assert report.count("<strong>Suggested wording:</strong>") == 10 + 6
     assert "compliance assistance, not legal advice" in report
 
 
 def test_audit_page_respects_business_type():
     terms = (FIXTURES / "marketplace_terms.md").read_text(encoding="utf-8")
     page = _audit_page(terms, business_type="marketplace").text
-    missing = _section(page, 'id="missing-title"', "</section>")
-    assert "Names a grievance officer with contact details and timelines" in missing
-    assert "Shows seller details on a marketplace" in missing
+    plan = _section(page, 'id="plan-title"', "</section>")
+    assert "Names a grievance officer with contact details and timelines" in plan
+    assert "Shows seller details on a marketplace" in plan
 
 
 def test_document_text_is_escaped():
@@ -367,10 +386,16 @@ def test_the_goal_choice_survives_an_error():
 
 def test_audit_page_shows_the_action_plan_for_the_goal():
     page = _audit_page(SAMPLE_TEXT, goal="quick").text
+    result = client.post("/api/audit", data={"text": SAMPLE_TEXT}).json()
     plan = _section(page, 'id="plan-title"', "</section>")
     assert "Do these first" in plan
-    assert 1 <= plan.count('<li class="missing-item">') <= 5
-    # Each item links to its detail: a missing clause below, or the flagged clause in the document.
+    top, rest = plan.split('<details class="wording plan-rest">')
+    assert 1 <= top.count('class="missing-item"') <= 5
+    # The clauses to add beyond the top five wait in a disclosure, so each still appears once.
+    shown = top.count('<li class="missing-item" id="missing-')
+    assert f"{len(result['missing']) - shown} more clauses to add" in rest
+    assert plan.count('<li class="missing-item" id="missing-') == len(result["missing"])
+    # A reword or check links to the flagged clause in the document.
     hrefs = re.findall(r'<a href="#([^"]+)">', plan)
     assert hrefs and all(f'id="{h}"' in page for h in hrefs)
     assert "Watch out for" in plan and "Keep it in shape" not in plan

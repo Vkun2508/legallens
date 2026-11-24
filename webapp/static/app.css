@@ -536,6 +536,7 @@ main.is-submitting .upload-form { opacity: 0.5; pointer-events: none; }
 .missing-desc { margin-top: var(--space-2); max-width: 70ch; color: var(--ink-2); }
 .plan-heading { margin-top: var(--space-6); }
 .plan .missing-list { margin-top: var(--space-2); }
+.plan-rest { margin-top: var(--space-4); }
 .basis-note { margin-top: var(--space-1); max-width: 70ch; font-size: var(--text-secondary); color: var(--ink-2); }
 
 /* Citations and the "checked against the official text" mark. */
@@ -547,7 +548,8 @@ main.is-submitting .upload-form { opacity: 0.5; pointer-events: none; }
 
 /* Suggested wording: a disclosure; the text is set as policy text, in the document face. */
 .wording { margin-top: var(--space-2); }
-.wording summary {
+/* Child combinators: the plan's "more clauses to add" disclosure holds rows with their own wording disclosures. */
+.wording > summary {
   display: flex;
   align-items: center;
   min-height: 44px;
@@ -556,10 +558,10 @@ main.is-submitting .upload-form { opacity: 0.5; pointer-events: none; }
   font: 500 var(--text-secondary) / 1.2 var(--font-ui);
   cursor: pointer;
 }
-.wording[open] summary { color: var(--ink); }
+.wording[open] > summary { color: var(--ink); }
 /* display:flex drops the native marker, so draw a chevron that turns when open. */
-.wording summary::-webkit-details-marker, .limits summary::-webkit-details-marker { display: none; }
-.wording summary::before, .limits summary::before {
+.wording > summary::-webkit-details-marker, .limits > summary::-webkit-details-marker { display: none; }
+.wording > summary::before, .limits > summary::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -570,7 +572,7 @@ main.is-submitting .upload-form { opacity: 0.5; pointer-events: none; }
   transform: rotate(-45deg);
   transition: transform var(--motion-150) var(--ease-out);
 }
-.wording[open] summary::before, .limits[open] summary::before { transform: rotate(45deg); }
+.wording[open] > summary::before, .limits[open] > summary::before { transform: rotate(45deg); }
 .wording-detail { max-width: 70ch; color: var(--ink-2); }
 .wording-label { font-weight: 600; color: var(--ink); }
 .wording-body { display: grid; justify-items: start; gap: var(--space-2); padding: var(--space-1) 0 var(--space-2) var(--space-3); border-left: 2px solid var(--rule-strong); }
@@ -597,6 +599,7 @@ main.is-submitting .upload-form { opacity: 0.5; pointer-events: none; }
 .choice-option input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--lens); }
 .choice-option > span { display: grid; }
 .choice-label { font-weight: 500; }
+.choice-plan { font-weight: 600; }
 
 /* App screens checklist. */
 .screens { margin-top: var(--space-16); padding-top: var(--space-6); border-top: 1px solid var(--rule); }

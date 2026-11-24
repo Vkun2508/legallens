@@ -32,7 +32,7 @@ keyword check against the rulebook, so say "possible issue", never "violation".
 | 6 | Scan `razorpay.com`, the homepage only. | "Give it a homepage and it finds the privacy policy link itself." |
 | 7 | Scroll to **Audit a policy**, paste a few lines of any policy and click **Audit this policy**. | "Or paste text, or upload a PDF." |
 | 8 | Click **Audit this policy** with nothing filled in. | "Mistakes are caught before anything is sent." |
-| 9 | Scroll to **Pricing** and **Questions**. | "The first scan is free; paid plans open after launch, and these prices are indicative. It's a keyword check, not legal advice." |
+| 9 | Scroll to **Pricing** and **Questions**. | "The first three quick check-ups are free; after that it's Monitoring, and the full reviews are the Full audit report. Paid plans open after launch, and these prices are indicative. It's a keyword check, not legal advice." |
 
 Scores from live sites change when the companies edit their pages. On 2026-11-05 Zerodha scored
 62 and Razorpay 68; quote them as "about".

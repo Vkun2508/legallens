@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import citation, mark, segments, tier_badge, verified, wording %}
+{% from "macros.html" import citation, mark, plan_item, segments, tier_badge, verified, wording %}
 {% block title %}{{ result.source }}: audit - LegalLens{% endblock %}
 {% block main_class %}page page-results{% endblock %}
 {% block content %}
@@ -43,28 +43,30 @@
 {% endif %}
 
 {% if plan and plan.goal %}
-{# The action plan: what to change (grouped by when), habits to keep and mistakes to avoid. Built only
-   from the missing-list and checklist parts below; each item links to its detail further down. #}
+{# The action plan: the one list of what to change, grouped by when. A clause to add carries its detail
+   in place (what it means, wording to fix); a reword or check links to the flagged clause in the policy
+   below. A capped plan (quick check-up) keeps the other clauses to add in a disclosure, so each missing
+   clause appears exactly once. Then habits to keep and mistakes to avoid. #}
 <section class="missing plan screen-only" aria-labelledby="plan-title">
   <h2 id="plan-title">Your action plan</h2>
   <p class="section-intro">{{ plan.intro }}</p>
   {% for group in plan.groups %}
   <h3 class="plan-heading">{{ group.label }} <span class="filter-count">{{ group["items"] | length }}</span></h3>
   <ol class="missing-list">
-    {% for item in group["items"] %}
-    <li class="missing-item">
-      <div class="missing-side">{{ tier_badge(item.tier, tier_labels) }}</div>
-      <div class="missing-main">
-        <p class="missing-title">{% if item.href %}<a href="{{ item.href }}">{{ item.action_label }}: {{ item.title }}</a>{% else %}{{ item.action_label }}: {{ item.title }}{% endif %}</p>
-        <p class="missing-cite">{{ citation(item) }}{% if item.refs %}<span>In {{ item.refs | join(", ") }}</span>{% endif %}</p>
-      </div>
-    </li>
-    {% endfor %}
+    {% for item in group["items"] %}{{ plan_item(item, tier_labels) }}{% endfor %}
   </ol>
   {% else %}
   <p class="section-intro">A keyword check found nothing to change. It can't confirm the wording is enough on its own.</p>
   {% endfor %}
-  {% if plan.more %}<p class="section-intro">{{ plan.more }} more {{ "fix is" if plan.more == 1 else "fixes are" }} in the report below.</p>{% endif %}
+  {% if plan.rest %}
+  <details class="wording plan-rest">
+    <summary>{{ plan.rest | length }} more {{ "clause" if plan.rest | length == 1 else "clauses" }} to add</summary>
+    <ol class="missing-list">
+      {% for item in plan.rest %}{{ plan_item(item, tier_labels) }}{% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+  {% if plan.more_issues %}<p class="section-intro">{{ plan.more_issues }} more possible {{ "issue is" if plan.more_issues == 1 else "issues are" }} marked in your policy below.</p>{% endif %}
   {% if plan.steps %}
   <h3 class="plan-heading">Alongside the fixes</h3>
   <ul class="checklist">
@@ -95,29 +97,6 @@
   {% endif %}
 </section>
 {% endif %}
-
-<section class="missing screen-only" aria-labelledby="missing-title">
-  <h2 id="missing-title">Missing clauses</h2>
-  {% if view.missing %}
-  <p class="section-intro">The law expects your policy to say these things, and no clause seems to. Most severe first.</p>
-  <ol class="missing-list">
-    {% for m in view.missing %}
-    <li class="missing-item" id="missing-{{ m.rule_id }}">
-      <div class="missing-side">{{ tier_badge(m.tier, tier_labels) }}</div>
-      <div class="missing-main">
-        <h3 class="missing-title">{{ m.title }}</h3>
-        <p class="missing-cite">{{ citation(m) }} {{ verified(m) }}</p>
-        <p class="missing-desc">{{ m.what_it_means }}</p>
-        {% if m.basis_note %}<p class="basis-note">{{ m.basis_note }}</p>{% endif %}
-        {{ wording(m.how_to_fix, "wording-missing-" ~ loop.index) }}
-      </div>
-    </li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  <p class="section-intro">Every required topic is covered by at least one clause. A keyword check can't confirm the wording is enough, so read the possible issues below too.</p>
-  {% endif %}
-</section>
 
 <details class="limits screen-only">
   <summary>How to read these results</summary>
@@ -240,25 +219,21 @@
   {% for group in plan.groups %}
   <article class="print-clause">
     <h3>{{ group.label }}</h3>
-    <ul>{% for item in group["items"] %}<li>{{ item.action_label }}: {{ item.title }} <span class="print-sev">{{ tier_labels[item.tier][0] }}, {{ item.citation }}{% if item.refs %}, in {{ item.refs | join(", ") }}{% endif %}</span></li>{% endfor %}</ul>
+    <ul>{% for item in group["items"] %}<li>{{ item.action_label }}: {{ item.title }} <span class="print-sev">{{ tier_labels[item.tier][0] }}, {{ item.citation }}{% if item.refs %}, in {{ item.refs | join(", ") }}{% endif %}</span>
+      {%- if item.what_it_means %}<p class="print-why">{{ item.what_it_means }}</p><p class="print-why"><strong>Suggested wording:</strong> {{ item.how_to_fix }}</p>{% endif %}</li>{% endfor %}</ul>
   </article>
   {% endfor %}
-  {% if plan.more %}<p class="print-why">{{ plan.more }} more {{ "fix is" if plan.more == 1 else "fixes are" }} listed below.</p>{% endif %}
+  {% if plan.rest %}
+  <article class="print-clause">
+    <h3>Also to add</h3>
+    <ul>{% for item in plan.rest %}<li>{{ item.title }} <span class="print-sev">{{ tier_labels[item.tier][0] }}, {{ item.citation }}</span><p class="print-why">{{ item.what_it_means }}</p><p class="print-why"><strong>Suggested wording:</strong> {{ item.how_to_fix }}</p></li>{% endfor %}</ul>
+  </article>
+  {% endif %}
+  {% if plan.more_issues %}<p class="print-why">{{ plan.more_issues }} more possible {{ "issue is" if plan.more_issues == 1 else "issues are" }} listed below.</p>{% endif %}
   {% for heading, entries in [("Keep it in shape", plan.manage), ("Watch out for", plan.watch_out)] if entries %}
   <article class="print-clause">
     <h3>{{ heading }}</h3>
     <ul>{% for t in entries %}<li><strong>{{ t.title }}.</strong> {{ t.points | join(" ") }}</li>{% endfor %}</ul>
-  </article>
-  {% endfor %}
-  {% endif %}
-
-  {% if view.missing %}
-  <h2 class="print-tier">Missing clauses <span>({{ view.missing | length }})</span></h2>
-  {% for m in view.missing %}
-  <article class="print-clause tier-{{ m.tier }}">
-    <h3>{{ m.title }} <span class="print-sev">{{ tier_labels[m.tier][0] }}, {{ m.citation }}</span></h3>
-    <p class="print-why">{{ m.what_it_means }}</p>
-    <p class="print-why"><strong>Suggested wording:</strong> {{ m.how_to_fix }}</p>
   </article>
   {% endfor %}
   {% endif %}

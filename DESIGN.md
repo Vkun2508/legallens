@@ -85,7 +85,7 @@ Self-hosted, with no third-party requests: Bricolage Grotesque (SIL Open Font Li
 - **Audit** (Pattern 2, Detail/Record):
   1. **Header:** document name, the score, three status sentences, and actions (Print report, Download draft fixes, Audit another policy).
   2. **Keyword-check banner.**
-  3. **Action plan, then missing clauses.** The action plan follows the review goal (first policy, live policy, quick check-up): fixes grouped by when, each linking to its detail below, then "Alongside the fixes", "Keep it in shape" and "Watch out for". It is built from the missing-list and screens-checklist parts, with no new component. Missing clauses follow, most severe first.
+  3. **Action plan, the one list of what to change.** It follows the review goal (first policy, live policy, quick check-up): fixes grouped by when, most severe first, then "Alongside the fixes", "Keep it in shape" and "Watch out for". A clause to add carries its detail in place (citation, what it means, suggested wording), so each missing clause appears once; a reword or check links to the flagged clause below. The quick check-up shows five fixes and keeps the other clauses to add in a "more clauses to add" disclosure. It is built from the missing-list and screens-checklist parts, with no new component.
   4. **"How to read these results".**
   5. **Toolbar:** sticky from 768px; severity filters, fold toggle, issue navigation.
   6. **Reader:** the minimap rail and the sheet.
@@ -160,7 +160,7 @@ static. The homepage's motion (the scan, the marking beat) is in `docs/DIRECTION
 - **Spotlight:** the current clause gets `--current`, a 3px lens rule and tinted evidence. Keys: `j`/`k` move between flags (ignored while typing), Esc clears.
 - **Minimap rail:** one tick per row, as tall as the row and coloured by tier. A lens-outlined window shows the visible part. It is mouse-only (`aria-hidden`); the brief's links and Previous/Next are the keyboard path.
 - **Print report:**
-  - **Contents:** the score and status, the action plan, missing clauses with wording, possible issues by severity with the clause text, the screens checklist, and the disclaimer with the rulebook version.
+  - **Contents:** the score and status, the action plan with the suggested wording for each clause to add, possible issues by severity with the clause text, the screens checklist, and the disclaimer with the rulebook version.
   - **Style:** ink on white, headings in Bricolage.
 
 ## Imagery and icons

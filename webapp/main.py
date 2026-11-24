@@ -47,6 +47,13 @@ BUSINESS_TYPES = (
     ("ecommerce", "Online store", "Adds the E-Commerce Rules"),
     ("marketplace", "Marketplace", "Adds the rules on seller information"),
 )
+# Which pricing plan each review goal belongs to, shown under the goal on the upload form. Copy only:
+# during early access every goal stays free (see the pricing section on the homepage).
+GOAL_PLANS = {
+    "prelaunch": "In the Full audit report",
+    "live": "In the Full audit report",
+    "quick": "Free for your first 3, then Monitoring",
+}
 # Multipart framing around the file adds a little to the request size.
 _MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 64 * 1024
 # A heading carried by this share of clauses is probably a document title.
@@ -168,13 +175,14 @@ def audit_page(
     except InputError as exc:
         form = {"text": text, "business_type": business_type, "goal": goal}
         return _error(request, exc.message, exc.status_code, form=form)
+    view = build_view(result.text, result.clauses, result.report)
     return templates.TemplateResponse(
         request,
         "audit.html",
         {
             "result": result,
-            "view": build_view(result.text, result.clauses, result.report),
-            "plan": plan_view(result.guidance, result.clauses),
+            "view": view,
+            "plan": plan_view(result.guidance, result.clauses, view["missing"]),
             "tier_labels": TIER_LABELS,
             "generated_on": f"{date.today():%d %B %Y}".lstrip("0"),
             "long_clause_chars": LONG_CLAUSE_CHARS,
@@ -395,7 +403,7 @@ def _index_context() -> dict:
         "laws": LAW_TABLE,
         "rule_card": RULE_CARD,
         "business_types": BUSINESS_TYPES,
-        "goals": [(g.key, g.label, g.hint) for g in default_guidance().goals],
+        "goals": [(g.key, g.label, g.hint, GOAL_PLANS[g.key]) for g in default_guidance().goals],
         "rulebook_version": default_rulebook().version,
     }
 

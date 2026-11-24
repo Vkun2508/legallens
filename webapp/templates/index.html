@@ -194,26 +194,26 @@
 </section>
 
 <section class="ll-pricing" id="pricing" aria-labelledby="pricing-title">
-  <h2 id="pricing-title">Your first scan is free</h2>
+  <h2 id="pricing-title">Your first three check-ups are free</h2>
   <dl class="ll-plans">
     <div class="ll-plan is-now">
-      <dt>Free scan</dt>
-      <dd class="ll-plan-what">Your score and a summary of the possible issues and missing clauses.</dd>
-      <dd class="ll-plan-price">₹0</dd>
-    </div>
-    <div class="ll-plan">
-      <dt>Full audit report</dt>
-      <dd class="ll-plan-what">A PDF report with the score, every finding with its citation, the wording to fix it, and the disclaimer.</dd>
-      <dd class="ll-plan-price">about ₹4,999 <small>once</small></dd>
+      <dt>Quick check-up</dt>
+      <dd class="ll-plan-what">Your score, the five things to do first and the risks to watch. Free for your first three check-ups.</dd>
+      <dd class="ll-plan-price">₹0 <small>first 3</small></dd>
     </div>
     <div class="ll-plan">
       <dt>Monitoring</dt>
-      <dd class="ll-plan-what">Your audit history and score over time, re-run on every new version of your policy.</dd>
+      <dd class="ll-plan-what">Quick check-ups after your free three, re-run on every new version of your policy, with your score over time.</dd>
       <dd class="ll-plan-price">about ₹1,999 <small>a month</small></dd>
+    </div>
+    <div class="ll-plan">
+      <dt>Full audit report</dt>
+      <dd class="ll-plan-what">For fixing a live policy or writing your first one: the full action plan by deadline, every finding with its citation and wording to fix it, as a PDF report.</dd>
+      <dd class="ll-plan-price">about ₹4,999 <small>once</small></dd>
     </div>
   </dl>
   <div class="ll-pricing-foot">
-    <p>LegalLens is in early access. Paid plans open after launch; the prices are indicative.</p>
+    <p>LegalLens is in early access. Paid plans open after launch, the prices are indicative, and until then every review is free.</p>
     <a class="scan-btn" href="#scan" data-rescan>Scan your policy free</a>
   </div>
 </section>
@@ -241,11 +241,12 @@
     <fieldset class="choice">
       <legend class="field-label">What do you need from this review?</legend>
       <div class="choice-options">
-        {% set chosen_goal = form.goal if form and form.goal else "live" %}
-        {% for value, label, hint in goals %}
+        {# The free option is preselected, so "Scan it free" lands on it. #}
+        {% set chosen_goal = form.goal if form and form.goal else "quick" %}
+        {% for value, label, hint, plan in goals %}
         <label class="choice-option">
           <input type="radio" name="goal" value="{{ value }}"{% if value == chosen_goal %} checked{% endif %}>
-          <span><span class="choice-label">{{ label }}</span> <span class="hint">{{ hint }}</span></span>
+          <span><span class="choice-label">{{ label }}</span> <span class="hint">{{ hint }}</span> <span class="hint choice-plan">{{ plan }}</span></span>
         </label>
         {% endfor %}
       </div>

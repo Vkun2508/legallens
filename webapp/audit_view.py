@@ -55,22 +55,34 @@ def _rule_view(rule: dict) -> dict:
     }
 
 
-def plan_view(guidance: dict, clauses: list[Clause]) -> dict:
-    """The action plan for the page: each item gets its colour slot, its citation, the clauses it is
-    in, and a link to its detail further down (the missing clause, or the first flagged clause)."""
+def plan_view(guidance: dict, clauses: list[Clause], missing: list[dict] = ()) -> dict:
+    """The action plan for the page, the one place clauses to add are listed.
+
+    Each item gets its colour slot and citation. A clause to add carries its detail (`missing`, from
+    `build_view`: what it means and the wording to fix it); a reword or check links to the first
+    clause it is in. `rest` holds the clauses to add that a capped plan (the quick check-up) leaves
+    out, so every missing clause still appears once; `more_issues` counts the left-out rewords and
+    checks, which stay marked in the policy below.
+    """
     by_index = {c.index: c for c in clauses}
-    groups = []
+    detail = {m["rule_id"]: m for m in missing}
+    groups, shown = [], set()
     for group in guidance.get("groups", []):
         items = []
         for item in group["items"]:
             indexes = [i for i in item["clause_indexes"] if i in by_index]
+            entry = {**_rule_view(item), "refs": [clause_ref(by_index[i]) for i in indexes]}
             if item["action"] == "add":
-                href = f"#missing-{item['rule_id']}"
+                found = detail.get(item["rule_id"], {})
+                entry.update(href=None, what_it_means=found.get("what_it_means"), how_to_fix=found.get("how_to_fix"))
+                shown.add(item["rule_id"])
             else:
-                href = f"#clause-{indexes[0]}" if indexes else None
-            items.append({**_rule_view(item), "refs": [clause_ref(by_index[i]) for i in indexes], "href": href})
+                entry["href"] = f"#clause-{indexes[0]}" if indexes else None
+            items.append(entry)
         groups.append({**group, "items": items})
-    return {**guidance, "groups": groups}
+    rest = [m for m in missing if m["rule_id"] not in shown]
+    more_issues = max(0, guidance.get("more", 0) - len(rest))
+    return {**guidance, "groups": groups, "rest": rest, "more_issues": more_issues}
 
 
 def _segments(text: str, clause: Clause, issues: list[dict]) -> list[dict]:

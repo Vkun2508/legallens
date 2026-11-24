@@ -35,6 +35,31 @@
 </details>
 {%- endmacro %}
 
+{# One row of the action plan. A clause to add carries its detail here, the only place it is listed;
+   a reword or check links to the flagged clause it is in. #}
+{% macro plan_item(item, tier_labels) -%}
+{% if item.what_it_means -%}
+<li class="missing-item" id="missing-{{ item.rule_id }}">
+  <div class="missing-side">{{ tier_badge(item.tier, tier_labels) }}</div>
+  <div class="missing-main">
+    <p class="missing-title">{% if item.action_label %}{{ item.action_label }}: {% endif %}{{ item.title }}</p>
+    <p class="missing-cite">{{ citation(item) }} {{ verified(item) }}</p>
+    <p class="missing-desc">{{ item.what_it_means }}</p>
+    {% if item.basis_note %}<p class="basis-note">{{ item.basis_note }}</p>{% endif %}
+    {{ wording(item.how_to_fix, "wording-missing-" ~ item.rule_id) }}
+  </div>
+</li>
+{%- else -%}
+<li class="missing-item">
+  <div class="missing-side">{{ tier_badge(item.tier, tier_labels) }}</div>
+  <div class="missing-main">
+    <p class="missing-title">{% if item.href %}<a href="{{ item.href }}">{{ item.action_label }}: {{ item.title }}</a>{% else %}{{ item.action_label }}: {{ item.title }}{% endif %}</p>
+    <p class="missing-cite">{{ citation(item) }}{% if item.refs %}<span>In {{ item.refs | join(", ") }}</span>{% endif %}</p>
+  </div>
+</li>
+{%- endif %}
+{%- endmacro %}
+
 {# The homepage sheet: the sample set as fine print. Rendered twice, once under the lens. #}
 {% macro fine_print(rows, tier_labels, park=none) -%}
 {% for row in rows %}

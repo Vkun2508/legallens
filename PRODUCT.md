@@ -31,8 +31,10 @@ The landing page has one action: run a free scan of their policy.
   CCPA Guidelines for Prevention and Regulation of Dark Patterns 2023.
 - **What competitors don't have:** missing-clause detection, which lists the required clauses that no
   part of the policy covers.
-- **Pricing (planned):** 1 free scan with a summary; a full audit report for about ₹4,999; monitoring
-  for about ₹1,999 a month. Payments are test mode only until the business is set up.
+- **Pricing (planned):** the quick check-up is free for the first 3; after that it is part of
+  monitoring, about ₹1,999 a month. Fixing a live policy and writing a first policy are the full audit
+  report, about ₹4,999. During early access every review is free, and nothing counts or blocks use.
+  Payments are test mode only until the business is set up.
 
 ## Operating Context
 
