@@ -70,6 +70,7 @@ class AuditReport:
     statuses: dict[str, str]  # rule id -> status, checkable rules only
     findings: list[dict]
     usage: dict = field(default_factory=dict)
+    unfair_terms: dict | None = None
 
     @property
     def checkable(self) -> list[Rule]:
@@ -156,7 +157,7 @@ class AuditReport:
         ]
 
     def to_dict(self) -> dict:
-        return {
+        data = {
             "mode": self.mode,
             "mode_reason": self.mode_reason,
             "business_type": self.business_type,
@@ -173,6 +174,9 @@ class AuditReport:
             "manual_checks": self.manual_checks,
             "usage": self.usage,
         }
+        if self.unfair_terms is not None:
+            data["unfair_terms"] = self.unfair_terms
+        return data
 
 
 def build_report(

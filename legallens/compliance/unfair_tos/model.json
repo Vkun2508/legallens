@@ -1,0 +1,150 @@
+{
+  "format_version": 1,
+  "name": "tfidf-logreg-unfair-tos",
+  "labels": [
+    "Limitation of liability",
+    "Unilateral termination",
+    "Unilateral change",
+    "Content removal",
+    "Contract by using",
+    "Choice of law",
+    "Jurisdiction",
+    "Arbitration"
+  ],
+  "keys": [
+    "limitation_of_liability",
+    "unilateral_termination",
+    "unilateral_change",
+    "content_removal",
+    "contract_by_using",
+    "choice_of_law",
+    "jurisdiction",
+    "arbitration"
+  ],
+  "thresholds": [
+    0.8,
+    0.6000000000000001,
+    0.8,
+    0.7000000000000001,
+    0.7500000000000001,
+    0.6500000000000001,
+    0.6000000000000001,
+    0.7000000000000001
+  ],
+  "intercepts": [
+    -2.8189090458899004,
+    -3.1525755486586666,
+    -2.872430656151519,
+    -3.4900518447528683,
+    -3.6894571367058426,
+    -3.84727836700645,
+    -3.794723543773019,
+    -3.78094877617821
+  ],
+  "n_features": 20343,
+  "vectorizer": {
+    "lowercase": true,
+    "strip_accents": "unicode",
+    "analyzer": "word",
+    "token_pattern": "(?u)\\b\\w\\w+\\b",
+    "ngram_range": [
+      1,
+      2
+    ],
+    "sublinear_tf": true,
+    "norm": "l2",
+    "min_df": 2,
+    "max_features": 100000
+  },
+  "weights": {
+    "dtype": "float32",
+    "byteorder": "little",
+    "layout": "idf[V] then coef[8][V] row-major"
+  },
+  "files": {
+    "vocab.txt.gz": "f3277e090c961adf3da7cbabea3db514ec9db17520699d83e6c0a785cfc8723f",
+    "weights.f32.gz": "ba1438a11176cff7d40eda82df07652d64f5d0d03750049efddea97a141e9c57"
+  },
+  "provenance": {
+    "dataset": "coastalcph/lex_glue",
+    "config": "unfair_tos",
+    "seed": 42,
+    "python": "3.13.13",
+    "scikit_learn": "1.6.1",
+    "numpy": "2.4.6",
+    "scipy": "1.16.3",
+    "trained_by": "scripts/build_unfair_model.py, reproducing the LegalLens Colab classical baseline (word_balanced, validation_per_label)"
+  },
+  "metrics": {
+    "validation": {
+      "global_threshold": 0.7500000000000001,
+      "global_macro_f1": 0.6908179759615609,
+      "per_label_macro_f1": 0.7075917110304111,
+      "per_label_micro_f1": 0.6989898989898989,
+      "fixed_050_macro_f1": 0.6156406323699569
+    },
+    "test": {
+      "micro_precision": 0.7333333333333333,
+      "micro_recall": 0.7096774193548387,
+      "micro_f1": 0.7213114754098361,
+      "macro_precision": 0.7653255161713808,
+      "macro_recall": 0.7348201712475169,
+      "macro_f1": 0.7385968268828309,
+      "weighted_f1": 0.7243580942069457,
+      "exact_match_accuracy": 0.9471064094586186,
+      "macro_average_precision": 0.8195549331327714,
+      "micro_average_precision": 0.7601560292246209
+    },
+    "test_confusion": {
+      "Limitation of liability": {
+        "tn": 1565,
+        "fp": 4,
+        "fn": 12,
+        "tp": 26
+      },
+      "Unilateral termination": {
+        "tn": 1550,
+        "fp": 19,
+        "fn": 8,
+        "tp": 30
+      },
+      "Unilateral change": {
+        "tn": 1563,
+        "fp": 6,
+        "fn": 17,
+        "tp": 21
+      },
+      "Content removal": {
+        "tn": 1583,
+        "fp": 11,
+        "fn": 3,
+        "tp": 10
+      },
+      "Contract by using": {
+        "tn": 1581,
+        "fp": 3,
+        "fn": 7,
+        "tp": 16
+      },
+      "Choice of law": {
+        "tn": 1592,
+        "fp": 2,
+        "fn": 1,
+        "tp": 12
+      },
+      "Jurisdiction": {
+        "tn": 1589,
+        "fp": 2,
+        "fn": 4,
+        "tp": 12
+      },
+      "Arbitration": {
+        "tn": 1599,
+        "fp": 1,
+        "fn": 2,
+        "tp": 5
+      }
+    }
+  },
+  "note": "Indicators of resemblance to UNFAIR-ToS benchmark categories, not legal conclusions. A sentence with no predicted category is not thereby fair."
+}

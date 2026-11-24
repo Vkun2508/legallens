@@ -1,0 +1,6 @@
+# Dev-only: rebuilds legallens/compliance/unfair_tos/ from the LexGLUE UNFAIR-ToS dataset.
+# The web app never needs these; run in a separate Python 3.13 venv.
+scikit-learn==1.6.1
+numpy==2.4.6
+scipy==1.16.3
+datasets>=3.0,<4.0

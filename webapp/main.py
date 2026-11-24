@@ -202,13 +202,14 @@ def audit_api(
 ) -> dict:
     """Compliance audit: score, findings with citations, missing clauses and manual checks."""
     try:
-        return _audit(file, text, business_type, mode, llm_checker, goal=goal).to_dict()
+        return _audit(file, text, business_type, mode, llm_checker, goal=goal, unfair_terms=True).to_dict()
     except InputError as exc:
         raise HTTPException(exc.status_code, exc.message) from exc
 
 
 def _audit(file: UploadFile | None, pasted: str, business_type: str, mode: str,
-           llm_checker: LLMChecker | None, name: str = "", goal: str = DEFAULT_GOAL) -> AuditResult:
+           llm_checker: LLMChecker | None, name: str = "", goal: str = DEFAULT_GOAL,
+           unfair_terms: bool = False) -> AuditResult:
     if goal not in GOALS:
         raise InputError("Choose what you need from this review: prelaunch, live or quick.")
     started = time.perf_counter()
@@ -219,7 +220,8 @@ def _audit(file: UploadFile | None, pasted: str, business_type: str, mode: str,
         raise InputError("No text could be extracted. This may be a scanned PDF; paste the text instead.", 422)
     clauses = segment(doc_text)
     try:
-        report = run_audit(doc_text, clauses, business_type=business_type, mode=mode, llm_checker=llm_checker)
+        report = run_audit(doc_text, clauses, business_type=business_type, mode=mode, llm_checker=llm_checker,
+                           unfair_terms=unfair_terms)
     except AuditInputError as exc:
         raise InputError(str(exc), exc.status_code) from exc
     warnings = _warnings(doc_text, clauses)

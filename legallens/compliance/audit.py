@@ -15,6 +15,7 @@ from legallens.compliance.keyword import KeywordChecker
 from legallens.compliance.llm import LLMChecker, LLMCheckError
 from legallens.compliance.report import AuditReport, build_report
 from legallens.compliance.rulebook import Rulebook, default_rulebook
+from legallens.compliance.unfair_terms import check_document
 from legallens.segmentation import Clause
 
 logger = logging.getLogger("legallens.compliance")
@@ -45,6 +46,12 @@ def has_ai_credentials() -> bool:
     return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
 
 
+def _with_unfair_terms(report: AuditReport, text: str, clauses: Sequence[Clause], enabled: bool) -> AuditReport:
+    if enabled:
+        report.unfair_terms = check_document(text, clauses)
+    return report
+
+
 def audit(
     text: str,
     clauses: Sequence[Clause],
@@ -53,8 +60,12 @@ def audit(
     mode: str = "auto",
     rulebook: Rulebook | None = None,
     llm_checker: LLMChecker | None = None,
+    unfair_terms: bool = False,
 ) -> AuditReport:
-    """Audit segmented document text. `llm_checker` overrides the default AI checker (tests inject one)."""
+    """Audit segmented document text. `llm_checker` overrides the default AI checker (tests inject one).
+
+    `unfair_terms=True` adds the bundled unfair-terms model's flags as `report.unfair_terms` (never scored).
+    """
     if mode not in MODES:
         raise AuditInputError(f"mode must be one of {', '.join(MODES)}")
     if len(text) > MAX_AUDIT_CHARS:
@@ -79,8 +90,10 @@ def audit(
             reason = exc.reason
             logger.warning("AI check failed (%s); using keyword fallback", exc.reason)
         else:
-            return build_report(text, clauses, result.findings, mode="full", model=checker.model,
-                                usage=result.usage.to_dict(checker.model), **common)
+            report = build_report(text, clauses, result.findings, mode="full", model=checker.model,
+                                  usage=result.usage.to_dict(checker.model), **common)
+            return _with_unfair_terms(report, text, clauses, unfair_terms)
 
     findings = KeywordChecker().check(clause_texts, rules)
-    return build_report(text, clauses, findings, mode="partial", mode_reason=reason, **common)
+    report = build_report(text, clauses, findings, mode="partial", mode_reason=reason, **common)
+    return _with_unfair_terms(report, text, clauses, unfair_terms)
